@@ -53,12 +53,20 @@ function Courses() {
       setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
       alert('Successfully enrolled in course!');
     } catch (err) {
-      if (err.response?.status === 409) {
+      const status = err.response?.status;
+      const backendMessage = err.response?.data?.error;
+
+      if (status === 409) {
         alert('You are already enrolled in this course.');
         setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
+      } else if (status === 403 && backendMessage?.includes('allowlist')) {
+        alert('This course is restricted to an allowlist of users, and your account is not on that list. Please contact the course creator if you believe this is a mistake.');
+      } else if (backendMessage) {
+        alert(backendMessage);
       } else {
         alert('Failed to enroll in course. Please try again.');
       }
+
       console.error(err);
     } finally {
       setEnrolling({ ...enrolling, [courseId]: false });

@@ -9,15 +9,17 @@ function CreateCourse() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    restrictedToAllowList: false,
+    allowedEmailsText: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -27,11 +29,20 @@ function CreateCourse() {
     setError(null);
 
     try {
+      // Parse allowed emails from textarea
+      const raw = formData.allowedEmailsText || '';
+      const allowedEmails = raw
+        .split(/[,\n]/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e.length > 0);
+
       // Use current logged-in user as author
       const courseData = {
         title: formData.title,
         description: formData.description,
         author: user, // Current user is the author
+        restrictedToAllowList: formData.restrictedToAllowList,
+        allowedEmails,
       };
 
       await coursesApi.create(courseData);
@@ -87,6 +98,41 @@ function CreateCourse() {
               placeholder="Enter course description"
             />
           </div>
+
+          <div className="mb-4">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                name="restrictedToAllowList"
+                checked={formData.restrictedToAllowList}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <span className="text-gray-700 text-sm font-bold">
+                Restrict access to specific users
+              </span>
+            </label>
+            <p className="mt-1 text-xs text-gray-500">
+              When enabled, only allowed emails, the course author, and admins can enroll and view content.
+            </p>
+          </div>
+
+          {formData.restrictedToAllowList && (
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Allowed emails (comma or newline separated)
+              </label>
+              <textarea
+                id="allowedEmailsText"
+                name="allowedEmailsText"
+                value={formData.allowedEmailsText}
+                onChange={handleChange}
+                rows="3"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
+                placeholder="user1@example.com, user2@example.com"
+              />
+            </div>
+          )}
 
           <div className="mb-6">
             <p className="text-sm text-gray-600">

@@ -76,8 +76,12 @@ function Lessons() {
       });
       setLessonProgress(progressMap);
     } catch (err) {
-      // Not enrolled or other error, ignore
-      console.error('Failed to load progress:', err);
+      // If user is not enrolled or backend returns a validation error, just log quietly
+      if (err.response?.status === 400 || err.response?.status === 403 || err.response?.status === 404) {
+        console.warn('Lessons: failed to load course progress (likely not enrolled yet):', err.response?.data || err.message);
+      } else {
+        console.error('Failed to load progress:', err);
+      }
     }
   };
 

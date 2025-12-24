@@ -13,6 +13,8 @@ function MyCourses() {
   const [error, setError] = useState(null);
   const [savingOrder, setSavingOrder] = useState({});
   const [deletingLesson, setDeletingLesson] = useState({});
+  const [savingAccess, setSavingAccess] = useState({});
+  const [accessForm, setAccessForm] = useState({}); // { [courseId]: { restrictedToAllowList, allowedEmailsText } }
 
   const isCreatorOrAdmin = user?.role === 'CREATOR' || user?.role === 'ADMIN';
 
@@ -110,6 +112,48 @@ function MyCourses() {
     }
   };
 
+  const handleAccessChange = (courseId, field, value) => {
+    setAccessForm((prev) => ({
+      ...prev,
+      [courseId]: {
+        restrictedToAllowList: prev[courseId]?.restrictedToAllowList ?? false,
+        allowedEmailsText: prev[courseId]?.allowedEmailsText ?? '',
+        ...{
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const handleSaveAccess = async (courseId) => {
+    const form = accessForm[courseId];
+    const course = courses.find((c) => c.id === courseId);
+    if (!course && !form) return;
+
+    const restricted = form?.restrictedToAllowList ?? course?.restrictedToAllowList ?? false;
+    const raw = form?.allowedEmailsText ?? (course?.allowedEmails || []).join(', ');
+    const allowedEmails = raw
+      .split(/[,\n]/)
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e.length > 0);
+
+    setSavingAccess((prev) => ({ ...prev, [courseId]: true }));
+    try {
+      const updated = await coursesApi.updateAccess(courseId, {
+        restrictedToAllowList: restricted,
+        allowedEmails,
+      });
+
+      // Update local courses state with new access info
+      setLessonsByCourse((prev) => ({ ...prev })); // no-op, just to ensure rerender
+    } catch (err) {
+      console.error('Failed to update course access:', err);
+      alert('Failed to update course access. Please try again.');
+    } finally {
+      setSavingAccess((prev) => ({ ...prev, [courseId]: false }));
+    }
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -163,6 +207,13 @@ function MyCourses() {
                     <h3 className="text-2xl font-semibold text-gray-900 mb-1">{course.title}</h3>
                     <p className="text-gray-600 text-sm mb-2">{course.description || 'No description'}</p>
                     <p className="text-xs text-gray-500">Course ID: {course.id}</p>
+                    <p className="text-xs mt-1">
+                      {course.restrictedToAllowList ? (
+                        <span className="text-red-600 font-medium">Restricted to allowlist</span>
+                      ) : (
+                        <span className="text-green-600">Open to all enrolled users</span>
+                      )}
+                    </p>
                   </div>
                   <div className="flex flex-col space-y-2">
                     <Link
@@ -197,6 +248,46 @@ function MyCourses() {
                       >
                         {savingOrder[course.id] ? 'Saving...' : 'Save Order'}
                       </button>
+                    </div>
+
+                    <div className="mb-4 border border-gray-200 rounded p-3 bg-gray-50">
+                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Access control</h5>
+                      <label className="inline-flex items-center mb-2">
+                        <input
+                          type="checkbox"
+                          checked={accessForm[course.id]?.restrictedToAllowList ?? course.restrictedToAllowList ?? false}
+                          onChange={(e) =>
+                            handleAccessChange(course.id, 'restrictedToAllowList', e.target.checked)
+                          }
+                          className="mr-2"
+                        />
+                        <span className="text-xs text-gray-700 font-medium">
+                          Restrict access to an allowlist of emails
+                        </span>
+                      </label>
+                      <textarea
+                        className="mt-1 w-full text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        rows={3}
+                        placeholder="user1@example.com, user2@example.com"
+                        value={
+                          accessForm[course.id]?.allowedEmailsText ??
+                          (course.allowedEmails && course.allowedEmails.length > 0
+                            ? course.allowedEmails.join(', ')
+                            : '')
+                        }
+                        onChange={(e) =>
+                          handleAccessChange(course.id, 'allowedEmailsText', e.target.value)
+                        }
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          disabled={savingAccess[course.id]}
+                          onClick={() => handleSaveAccess(course.id)}
+                          className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {savingAccess[course.id] ? 'Saving...' : 'Save access settings'}
+                        </button>
+                      </div>
                     </div>
 
                     {lessonsByCourse[course.id].length === 0 ? (

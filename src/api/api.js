@@ -26,6 +26,14 @@ export const coursesApi = {
     const response = await api.get('/courses/my-created');
     return response.data;
   },
+  getAccess: async (courseId) => {
+    const response = await api.get(`/courses/${courseId}/access`);
+    return response.data;
+  },
+  updateAccess: async (courseId, payload) => {
+    const response = await api.put(`/courses/${courseId}/access`, payload);
+    return response.data;
+  },
 };
 
 // Lessons API
@@ -35,7 +43,12 @@ export const lessonsApi = {
     return response.data;
   },
   getByCourse: async (courseId) => {
-    const response = await api.get(`/lessons/course/${courseId}`);
+    const numericCourseId = Number(courseId);
+    if (!Number.isInteger(numericCourseId)) {
+      console.warn('lessonsApi.getByCourse called with invalid courseId:', courseId);
+      return [];
+    }
+    const response = await api.get(`/lessons/course/${numericCourseId}`);
     return response.data;
   },
   getById: async (lessonId) => {

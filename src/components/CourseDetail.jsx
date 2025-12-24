@@ -43,7 +43,13 @@ function CourseDetail() {
 
   const loadLessons = async () => {
     try {
-      const data = await lessonsApi.getByCourse(parseInt(courseId));
+      const numericCourseId = parseInt(courseId, 10);
+      if (Number.isNaN(numericCourseId)) {
+        console.warn('CourseDetail: invalid courseId for loadLessons:', courseId);
+        return;
+      }
+
+      const data = await lessonsApi.getByCourse(numericCourseId);
       setLessons(data);
     } catch (err) {
       setError('Failed to load lessons');
@@ -65,15 +71,25 @@ function CourseDetail() {
 
   const loadProgress = async () => {
     try {
-      const progress = await enrollmentApi.getCourseProgress(parseInt(courseId));
+      const numericCourseId = parseInt(courseId, 10);
+      if (Number.isNaN(numericCourseId)) {
+        console.warn('CourseDetail: invalid courseId for loadProgress:', courseId);
+        return;
+      }
+
+      const progress = await enrollmentApi.getCourseProgress(numericCourseId);
       const progressMap = {};
       progress.lessons.forEach(lp => {
         progressMap[lp.lesson.id] = lp.completed;
       });
       setLessonProgress(progressMap);
     } catch (err) {
-      // Not enrolled or other error, ignore
-      console.error('Failed to load progress:', err);
+      // If user is not enrolled or backend returns a validation error, just log quietly
+      if (err.response?.status === 400 || err.response?.status === 403 || err.response?.status === 404) {
+        console.warn('Failed to load course progress (likely not enrolled yet):', err.response?.data || err.message);
+      } else {
+        console.error('Failed to load progress:', err);
+      }
     }
   };
 
@@ -85,12 +101,21 @@ function CourseDetail() {
       await loadProgress();
       alert('Successfully enrolled in course!');
     } catch (err) {
-      if (err.response?.status === 409) {
+      const status = err.response?.status;
+      const backendMessage = err.response?.data?.error;
+
+      if (status === 409) {
         setIsEnrolled(true);
         await loadProgress();
+        alert('You are already enrolled in this course.');
+      } else if (status === 403 && backendMessage?.includes('allowlist')) {
+        alert('This course is restricted to an allowlist of users, and your account is not on that list. Please contact the course creator if you believe this is a mistake.');
+      } else if (backendMessage) {
+        alert(backendMessage);
       } else {
         alert('Failed to enroll in course. Please try again.');
       }
+
       console.error(err);
     } finally {
       setEnrolling(false);
@@ -103,7 +128,14 @@ function CourseDetail() {
       setLessonProgress(prev => ({ ...prev, [lessonId]: true }));
       await loadProgress(); // Reload to get updated stats
     } catch (err) {
-      alert('Failed to mark lesson as complete. Make sure you are enrolled in the course.');
+      const status = err.response?.status;
+      const backendMessage = err.response?.data?.error;
+
+      if (status === 403 || status === 401) {
+        alert(backendMessage || 'You cannot mark this lesson as complete because you are not enrolled in this course.');
+      } else {
+        alert('Failed to mark lesson as complete. Please try again.');
+      }
       console.error(err);
     }
   };
