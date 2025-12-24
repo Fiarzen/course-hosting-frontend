@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// Use the proxy path which is configured in vite.config.js
-// This avoids CORS issues during development
-const API_BASE_URL = import.meta.env.DEV ? '/api' : 'http://localhost:8080';
+// Use the proxy path which is configured in vite.config.js during development
+// In production (Netlify), call the deployed backend EC2 instance directly
+const API_BASE_URL = import.meta.env.DEV
+  ? '/api'
+  : 'http://52.19.127.28:8080';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
