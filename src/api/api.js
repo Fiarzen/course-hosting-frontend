@@ -110,30 +110,21 @@ export const usersApi = {
     const response = await api.post('/users/register', userData);
     return response.data;
   },
-  getCurrentUser: async (email, password) => {
-    // Use Basic Auth for this request
-    const response = await api.get('/users/me', {
-      auth: {
-        username: email,
-        password: password,
-      },
-    });
+  getCurrentUser: async () => {
+    const response = await api.get('/users/me');
     return response.data;
-  },
-  // Helper to set auth for all future requests
-  setAuth: (email, password) => {
-    if (email && password) {
-      api.defaults.auth = {
-        username: email,
-        password: password,
-      };
-    } else {
-      api.defaults.auth = undefined;
-    }
   },
   upgradeUserToCreator: async (userId) => {
     const response = await api.post(`/users/${userId}/upgrade-to-creator`);
     return response.data;
+  },
+};
+
+// Auth API (token-based)
+export const authApi = {
+  login: async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
+    return response.data; // { token, user }
   },
 };
 

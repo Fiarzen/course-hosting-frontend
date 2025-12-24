@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { usersApi } from '../api/api';
+import api, { usersApi, authApi } from '../api/api';
 
 const AuthContext = createContext(null);
 
@@ -15,30 +15,17 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on mount
+  // Load user from localStorage on mount (token-based)
   useEffect(() => {
-    const storedCredentials = localStorage.getItem('auth_credentials');
-    if (storedCredentials) {
+    const stored = localStorage.getItem('auth_data');
+    if (stored) {
       try {
-        const { email, password } = JSON.parse(storedCredentials);
-        // Set auth for all future requests
-        usersApi.setAuth(email, password);
-        // Verify credentials by getting current user
-        usersApi.getCurrentUser(email, password)
-          .then((userData) => {
-            setUser(userData);
-          })
-          .catch(() => {
-            // Invalid credentials, clear storage
-            localStorage.removeItem('auth_credentials');
-            usersApi.setAuth(null, null);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
+        const { token, user: storedUser } = JSON.parse(stored);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        setUser(storedUser);
       } catch (err) {
-        localStorage.removeItem('auth_credentials');
-        usersApi.setAuth(null, null);
+        localStorage.removeItem('auth_data');
+      } finally {
         setLoading(false);
       }
     } else {
@@ -48,38 +35,41 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const userData = await usersApi.getCurrentUser(email, password);
-      // Store credentials for future requests
-      localStorage.setItem('auth_credentials', JSON.stringify({ email, password }));
-      // Set auth for all future API requests
-      usersApi.setAuth(email, password);
+      const { token, user: userData } = await authApi.login(email, password);
+
+      // Store token + user for future sessions
+      localStorage.setItem('auth_data', JSON.stringify({ token, user: userData }));
+
+      // Set Authorization header for all future API requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
       setUser(userData);
       return { success: true, user: userData };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Invalid email or password' 
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Invalid email or password',
       };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('auth_credentials');
-    usersApi.setAuth(null, null);
+    localStorage.removeItem('auth_data');
+    delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
   const refreshUser = async () => {
-    const storedCredentials = localStorage.getItem('auth_credentials');
-    if (storedCredentials) {
-      try {
-        const { email, password } = JSON.parse(storedCredentials);
-        const userData = await usersApi.getCurrentUser(email, password);
-        setUser(userData);
-        return userData;
-      } catch (err) {
-        console.error('Failed to refresh user:', err);
-      }
+    try {
+      const stored = localStorage.getItem('auth_data');
+      if (!stored) return;
+      const { token } = JSON.parse(stored);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const userData = await usersApi.getCurrentUser();
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
     }
   };
 
