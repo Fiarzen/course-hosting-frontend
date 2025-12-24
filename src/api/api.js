@@ -118,6 +118,11 @@ export const usersApi = {
     const response = await api.post(`/users/${userId}/upgrade-to-creator`);
     return response.data;
   },
+  // Admin: generate a password reset link for a given user
+  resetPassword: async (userId) => {
+    const response = await api.post(`/users/${userId}/reset-password`);
+    return response.data; // { message, resetToken, resetPath }
+  },
 };
 
 // Auth API (token-based)
@@ -125,6 +130,11 @@ export const authApi = {
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
     return response.data; // { token, user }
+  },
+  // Complete a password reset using the one-time token
+  resetPasswordWithToken: async (token, newPassword) => {
+    const response = await api.post('/auth/reset-password', { token, newPassword });
+    return response.data; // { message }
   },
 };
 

@@ -13,6 +13,7 @@ import CourseDetail from './components/CourseDetail';
 import LessonView from './components/LessonView';
 import EditLesson from './components/EditLesson';
 import MyCourses from './components/MyCourses';
+import ResetPassword from './components/ResetPassword';
 
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -178,6 +179,7 @@ function App() {
             <Route path="/courses/create" element={<CreateCourse />} />
             <Route path="/lessons/create" element={<CreateLesson />} />
             <Route path="/my-courses" element={<MyCourses />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </main>
       </div>

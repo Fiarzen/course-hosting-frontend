@@ -8,6 +8,7 @@ function Users() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [upgrading, setUpgrading] = useState({});
+  const [resetting, setResetting] = useState({});
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -52,6 +53,33 @@ function Users() {
       console.error(err);
     } finally {
       setUpgrading({ ...upgrading, [userId]: false });
+    }
+  };
+
+  const handleResetPassword = async (userId) => {
+    if (!window.confirm('Generate a password reset link for this user?')) {
+      return;
+    }
+
+    setResetting({ ...resetting, [userId]: true });
+    try {
+      const result = await usersApi.resetPassword(userId);
+      const resetPath = result?.resetPath || (result?.resetToken ? `/reset-password?token=${result.resetToken}` : '');
+
+      if (!resetPath) {
+        alert('Password reset link could not be generated. Please try again.');
+        return;
+      }
+
+      const fullUrl = `${window.location.origin}${resetPath}`;
+
+      // Show a prompt so the admin can copy the link and send it to the user
+      window.prompt('Copy this password reset link and send it to the user:', fullUrl);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to generate password reset link. Please try again.');
+      console.error(err);
+    } finally {
+      setResetting({ ...resetting, [userId]: false });
     }
   };
 
@@ -128,7 +156,7 @@ function Users() {
                     </span>
                   </td>
                   {isAdmin && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                       {userItem.role !== 'CREATOR' && userItem.role !== 'ADMIN' && (
                         <button
                           onClick={() => handleUpgradeToCreator(userItem.id)}
@@ -138,6 +166,13 @@ function Users() {
                           {upgrading[userItem.id] ? 'Upgrading...' : 'Upgrade to Creator'}
                         </button>
                       )}
+                      <button
+                        onClick={() => handleResetPassword(userItem.id)}
+                        disabled={resetting[userItem.id]}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {resetting[userItem.id] ? 'Generating link...' : 'Reset Password'}
+                      </button>
                     </td>
                   )}
                 </tr>
