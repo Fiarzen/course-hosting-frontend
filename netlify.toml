@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Proxy all /api/* requests from Netlify (HTTPS) to the backend EC2 instance (HTTP)
+[[redirects]]
+  from = "/api/*"
+  to = "http://52.19.127.28:8080/:splat"
+  status = 200
+  force = true
+
+# Optional: proxy /files so static lesson PDFs also work through Netlify
+[[redirects]]
+  from = "/files/*"
+  to = "http://52.19.127.28:8080/files/:splat"
+  status = 200
+  force = true

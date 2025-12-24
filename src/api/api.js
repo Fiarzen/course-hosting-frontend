@@ -1,10 +1,9 @@
 import axios from 'axios';
 
-// Use the proxy path which is configured in vite.config.js during development
-// In production (Netlify), call the deployed backend EC2 instance directly
-const API_BASE_URL = import.meta.env.DEV
-  ? '/api'
-  : 'http://52.19.127.28:8080';
+// Always call the backend via the /api path.
+// In development, Vite proxies /api -> http://localhost:8080 (see vite.config.js).
+// In production (Netlify), netlify.toml proxies /api -> http://52.19.127.28:8080.
+const API_BASE_URL = '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
