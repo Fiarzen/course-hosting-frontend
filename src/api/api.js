@@ -50,8 +50,11 @@ export const lessonsApi = {
     await api.delete(`/lessons/${lessonId}`);
   },
   update: async (lessonId, data) => {
-    // `data` can be JSON or FormData. Axios will set correct headers automatically.
-    const response = await api.put(`/lessons/${lessonId}`, data);
+    // `data` can be JSON or FormData. If it's FormData, override Content-Type so the browser sets the boundary.
+    const config = data instanceof FormData
+      ? { headers: { 'Content-Type': undefined } }
+      : {};
+    const response = await api.put(`/lessons/${lessonId}`, data, config);
     return response.data;
   },
   create: async (lessonData, files = {}) => {

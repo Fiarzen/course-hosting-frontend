@@ -1,0 +1,56 @@
+.lesson-view {
+  padding: 1.5rem 1rem;
+}
+
+.lesson-view__container {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.lesson-view__back-button {
+  display: inline-block;
+  margin-bottom: 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.lesson-view__header {
+  margin-bottom: 1rem;
+}
+
+.lesson-view__title {
+  font-weight: 700;
+}
+
+.lesson-view__meta {
+  font-size: 0.875rem;
+}
+
+.lesson-view__nav-btn {
+  cursor: pointer;
+}
+
+.lesson-view__card {
+  margin-bottom: 1.5rem;
+}
+
+.lesson-view__content-text {
+  white-space: pre-wrap;
+}
+
+.lesson-view__status-text {
+  font-weight: 500;
+}
+
+.lesson-view__complete-btn {
+  cursor: pointer;
+}
+
+.lesson-view__video-frame {
+  border: none;
+}
+
+.lesson-view__pdf-link {
+  text-decoration: none;
+}
