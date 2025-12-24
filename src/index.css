@@ -2,17 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --branch-bg-from: #f9fbf7;
+  --branch-bg-to: #ecfdf3;
+  --branch-accent: #4f7c4a;
+  --branch-accent-soft: #8fb98a;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--branch-bg-from);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(79, 124, 74, 0.08) 0, transparent 55%),
+    radial-gradient(circle at 90% 80%, rgba(143, 185, 138, 0.12) 0, transparent 55%),
+    linear-gradient(to bottom right, var(--branch-bg-from), var(--branch-bg-to));
+  background-attachment: fixed;
+}
+
+h1,
+.h-heading,
+.branch-heading {
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+.branch-theme {
+  min-height: 100vh;
+  background: transparent;
+  position: relative;
+}
+
+.branch-theme::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(34, 197, 94, 0.12) 0, transparent 55%),
+    radial-gradient(circle at 80% 90%, rgba(22, 163, 74, 0.14) 0, transparent 55%),
+    linear-gradient(to bottom right, transparent, rgba(148, 163, 184, 0.08));
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  z-index: -1;
+}
+
+.branch-nav {
+  background: rgba(249, 253, 247, 0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.branch-nav__brand {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--branch-accent);
+}
+
+.branch-pill {
+  border-radius: 9999px;
+  background: rgba(79, 124, 74, 0.1);
+  color: #1f2933;
+}
