@@ -8,9 +8,9 @@ function CreateLesson() {
     title: '',
     content: '',
     courseId: '',
+    videoUrl: '',
   });
   const [files, setFiles] = useState({
-    video: null,
     pdf: null,
   });
   const [courses, setCourses] = useState([]);
@@ -48,6 +48,34 @@ function CreateLesson() {
     }));
   };
 
+  // Helper function to convert YouTube URL to embed format
+  const convertToEmbedUrl = (url) => {
+    if (!url) return null;
+    
+    // Handle various YouTube URL formats
+    // https://www.youtube.com/watch?v=VIDEO_ID
+    // https://youtu.be/VIDEO_ID
+    // https://www.youtube.com/embed/VIDEO_ID
+    
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `https://www.youtube.com/embed/${match[1]}`;
+      }
+    }
+    
+    // If it's already an embed URL, return as is
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    
+    return url; // Return original if no pattern matches
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -60,11 +88,15 @@ function CreateLesson() {
         return;
       }
 
+      // Convert YouTube URL to embed format if provided
+      const videoUrl = formData.videoUrl ? convertToEmbedUrl(formData.videoUrl) : null;
+
       await lessonsApi.create(
         {
           title: formData.title,
           content: formData.content,
           courseId: parseInt(formData.courseId),
+          videoUrl: videoUrl,
         },
         files
       );
@@ -143,20 +175,21 @@ function CreateLesson() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="video" className="block text-gray-700 text-sm font-bold mb-2">
-              Video File (Optional)
+            <label htmlFor="videoUrl" className="block text-gray-700 text-sm font-bold mb-2">
+              YouTube Video URL (Optional)
             </label>
             <input
-              type="file"
-              id="video"
-              name="video"
-              accept="video/*"
-              onChange={handleFileChange}
+              type="url"
+              id="videoUrl"
+              name="videoUrl"
+              value={formData.videoUrl}
+              onChange={handleChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
+              placeholder="https://www.youtube.com/watch?v=..."
             />
-            {files.video && (
-              <p className="mt-2 text-sm text-gray-600">Selected: {files.video.name}</p>
-            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Paste a YouTube video URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID)
+            </p>
           </div>
 
           <div className="mb-6">

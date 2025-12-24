@@ -4,12 +4,16 @@ import { useAuth } from '../context/AuthContext';
 import { coursesApi, enrollmentApi } from '../api/api';
 
 function Courses() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [enrolledCourseIds, setEnrolledCourseIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [enrolling, setEnrolling] = useState({});
+
+  // Check if user can create courses
+  const canCreateCourse = user?.role === 'CREATOR' || user?.role === 'ADMIN';
+
 
   useEffect(() => {
     loadCourses();
@@ -82,12 +86,14 @@ function Courses() {
     <div className="px-4 py-6 sm:px-0">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Courses</h2>
-        <Link
-          to="/courses/create"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 ease-in-out"
-        >
-          + Create Course
-        </Link>
+        {canCreateCourse && (
+          <Link
+            to="/courses/create"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 ease-in-out"
+          >
+            + Create Course
+          </Link>
+        )}
       </div>
 
       {courses.length === 0 ? (
@@ -102,7 +108,9 @@ function Courses() {
               className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
             >
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{course.title}</h3>
+                <Link to={`/courses/${course.id}`} className="block">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-indigo-600">{course.title}</h3>
+                </Link>
                 <p className="text-gray-600 mb-4 line-clamp-3">{course.description || 'No description'}</p>
                 {course.author && (
                   <div className="flex items-center text-sm text-gray-500">

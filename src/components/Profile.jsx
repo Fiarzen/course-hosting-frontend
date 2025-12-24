@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { enrollmentApi } from '../api/api';
-import { useNavigate } from 'react-router-dom';
 
 function Profile() {
   const { user, isAuthenticated } = useAuth();
@@ -130,9 +130,11 @@ function Profile() {
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                        {enrollment.course.title}
-                      </h4>
+                      <Link to={`/courses/${enrollment.course.id}`}>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-2 hover:text-indigo-600">
+                          {enrollment.course.title}
+                        </h4>
+                      </Link>
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                         {enrollment.course.description || 'No description'}
                       </p>

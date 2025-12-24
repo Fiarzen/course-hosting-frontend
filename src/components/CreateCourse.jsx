@@ -1,30 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { coursesApi, usersApi } from '../api/api';
+import { useAuth } from '../context/AuthContext';
+import { coursesApi } from '../api/api';
 
 function CreateCourse() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    authorId: '',
   });
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    try {
-      const data = await usersApi.getAll();
-      setUsers(data);
-    } catch (err) {
-      console.error('Failed to load users:', err);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,23 +27,18 @@ function CreateCourse() {
     setError(null);
 
     try {
+      // Use current logged-in user as author
       const courseData = {
         title: formData.title,
         description: formData.description,
+        author: user, // Current user is the author
       };
-
-      // Only include author if one is selected
-      if (formData.authorId) {
-        const selectedUser = users.find((u) => u.id === parseInt(formData.authorId));
-        if (selectedUser) {
-          courseData.author = selectedUser;
-        }
-      }
 
       await coursesApi.create(courseData);
       navigate('/');
     } catch (err) {
-      setError('Failed to create course. Please try again.');
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to create course. Please make sure you are logged in as a CREATOR or ADMIN.';
+      setError(errorMessage);
       console.error(err);
     } finally {
       setLoading(false);
@@ -107,23 +89,9 @@ function CreateCourse() {
           </div>
 
           <div className="mb-6">
-            <label htmlFor="authorId" className="block text-gray-700 text-sm font-bold mb-2">
-              Author
-            </label>
-            <select
-              id="authorId"
-              name="authorId"
-              value={formData.authorId}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
-            >
-              <option value="">Select an author (optional)</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name || user.email} {user.role ? `(${user.role})` : ''}
-                </option>
-              ))}
-            </select>
+            <p className="text-sm text-gray-600">
+              Course will be created by: <span className="font-medium">{user?.name || user?.email}</span>
+            </p>
           </div>
 
           <div className="flex items-center justify-between">

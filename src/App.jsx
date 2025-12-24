@@ -8,6 +8,7 @@ import CreateLesson from './components/CreateLesson';
 import Register from './components/Register';
 import Login from './components/Login';
 import Profile from './components/Profile';
+import CourseDetail from './components/CourseDetail';
 
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -96,6 +97,7 @@ function App() {
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <Routes>
             <Route path="/" element={<Courses />} />
+            <Route path="/courses/:courseId" element={<CourseDetail />} />
             <Route path="/lessons" element={<Lessons />} />
             <Route path="/users" element={<Users />} />
             <Route path="/login" element={<Login />} />

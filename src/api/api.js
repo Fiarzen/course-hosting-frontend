@@ -36,24 +36,26 @@ export const lessonsApi = {
   create: async (lessonData, files = {}) => {
     const formData = new FormData();
 
-    // Add files if provided
-    if (files.video) {
-      formData.append('video', files.video);
-    }
+    // Add PDF file if provided
     if (files.pdf) {
       formData.append('pdf', files.pdf);
     }
 
-    // Send query parameters in URL and files in multipart/form-data body
+    // Add text parameters
+    formData.append('title', lessonData.title);
+    formData.append('content', lessonData.content);
+    formData.append('courseId', lessonData.courseId.toString());
+    
+    // Add videoUrl if provided (YouTube URL)
+    if (lessonData.videoUrl) {
+      formData.append('videoUrl', lessonData.videoUrl);
+    }
+
+    // Send multipart/form-data body
     // Axios will automatically set Content-Type with boundary for FormData
     const response = await api.post('/lessons', formData, {
       headers: {
         'Content-Type': undefined, // Let axios set multipart/form-data with boundary automatically
-      },
-      params: {
-        title: lessonData.title,
-        content: lessonData.content,
-        courseId: lessonData.courseId,
       },
     });
     return response.data;

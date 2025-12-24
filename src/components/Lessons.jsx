@@ -4,12 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { lessonsApi, coursesApi } from '../api/api';
 
 function Lessons() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [lessons, setLessons] = useState([]);
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lessonProgress, setLessonProgress] = useState({});
   
   // Check if user is CREATOR or ADMIN
   const canCreateLesson = user?.role === 'CREATOR' || user?.role === 'ADMIN';
@@ -25,6 +26,7 @@ function Lessons() {
     } else {
       loadLessons();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCourseId]);
 
   const loadLessons = async () => {
@@ -61,6 +63,39 @@ function Lessons() {
       setCourses(data);
     } catch (err) {
       console.error('Failed to load courses:', err);
+    }
+  };
+
+  const loadProgress = async () => {
+    if (!isAuthenticated || !selectedCourseId) return;
+    try {
+      const progress = await enrollmentApi.getCourseProgress(selectedCourseId);
+      const progressMap = {};
+      progress.lessons.forEach(lp => {
+        progressMap[lp.lesson.id] = lp.completed;
+      });
+      setLessonProgress(progressMap);
+    } catch (err) {
+      // Not enrolled or other error, ignore
+      console.error('Failed to load progress:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCourseId && isAuthenticated) {
+      loadProgress();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCourseId, isAuthenticated]);
+
+  const handleCompleteLesson = async (lessonId) => {
+    try {
+      await enrollmentApi.completeLesson(lessonId);
+      setLessonProgress(prev => ({ ...prev, [lessonId]: true }));
+      await loadProgress(); // Reload to get updated stats
+    } catch (err) {
+      alert('Failed to mark lesson as complete. Make sure you are enrolled in the course.');
+      console.error(err);
     }
   };
 
@@ -131,19 +166,42 @@ function Lessons() {
                 {lesson.course && (
                   <div className="mb-2">
                     <span className="text-sm text-gray-500">Course: </span>
-                    <span className="text-sm font-medium text-indigo-600">{lesson.course.title}</span>
+                    <Link to={`/courses/${lesson.course.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                      {lesson.course.title}
+                    </Link>
+                  </div>
+                )}
+                {isAuthenticated && selectedCourseId && lessonProgress[lesson.id] && (
+                  <div className="mb-2">
+                    <span className="text-sm text-green-600">✓ Completed</span>
                   </div>
                 )}
                 <div className="mt-4 space-y-2">
                   {lesson.videoUrl && (
-                    <a
-                      href={lesson.videoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      📹 View Video
-                    </a>
+                    <div className="mb-2">
+                      {lesson.videoUrl.includes('youtube.com/embed/') || lesson.videoUrl.includes('youtube.com/watch') || lesson.videoUrl.includes('youtu.be/') ? (
+                        <div className="relative pb-[56.25%] h-0 overflow-hidden rounded">
+                          <iframe
+                            className="absolute top-0 left-0 w-full h-full"
+                            src={lesson.videoUrl.includes('youtube.com/embed/') ? lesson.videoUrl : 
+                                 lesson.videoUrl.includes('youtube.com/watch?v=') ? lesson.videoUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/') :
+                                 lesson.videoUrl.includes('youtu.be/') ? lesson.videoUrl.replace('youtu.be/', 'youtube.com/embed/') : lesson.videoUrl}
+                            title={lesson.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      ) : (
+                        <a
+                          href={lesson.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          📹 View Video
+                        </a>
+                      )}
+                    </div>
                   )}
                   {lesson.pdfUrl && (
                     <a
@@ -156,8 +214,16 @@ function Lessons() {
                     </a>
                   )}
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
                   <span className="text-sm text-indigo-600 font-medium">ID: {lesson.id}</span>
+                  {isAuthenticated && selectedCourseId && !lessonProgress[lesson.id] && (
+                    <button
+                      onClick={() => handleCompleteLesson(lesson.id)}
+                      className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded"
+                    >
+                      Mark Complete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
