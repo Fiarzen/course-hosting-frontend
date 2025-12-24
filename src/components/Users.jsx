@@ -1,26 +1,57 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { usersApi } from '../api/api';
 
 function Users() {
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [upgrading, setUpgrading] = useState({});
+
+  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (isAdmin) {
+      loadUsers();
+    } else {
+      setError('Only admins can access this page.');
+      setLoading(false);
+    }
+  }, [isAdmin]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await usersApi.getAll();
+      const response = await usersApi.getAll();
+      // Backend returns ResponseEntity, so data is in response.data
+      const data = Array.isArray(response) ? response : (response.data || []);
       setUsers(data);
       setError(null);
     } catch (err) {
-      setError('Failed to load users. Make sure the backend is running on http://localhost:8080');
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        setError(err.response?.data?.error || 'Only admins can access this page.');
+      } else {
+        setError(err.response?.data?.error || 'Failed to load users. Make sure you are an admin.');
+      }
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpgradeToCreator = async (userId) => {
+    setUpgrading({ ...upgrading, [userId]: true });
+    try {
+      await usersApi.upgradeUserToCreator(userId);
+      // Reload users
+      await loadUsers();
+      alert('User successfully upgraded to CREATOR!');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to upgrade user. Please try again.');
+      console.error(err);
+    } finally {
+      setUpgrading({ ...upgrading, [userId]: false });
     }
   };
 
@@ -66,25 +97,49 @@ function Users() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
                 </th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+              {users.map((userItem) => (
+                <tr key={userItem.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {user.id}
+                    {userItem.id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.name || 'N/A'}
+                    {userItem.name || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.email || 'N/A'}
+                    {userItem.email || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                      {user.role || 'N/A'}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      userItem.role === 'ADMIN' 
+                        ? 'bg-purple-100 text-purple-800'
+                        : userItem.role === 'CREATOR'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-indigo-100 text-indigo-800'
+                    }`}>
+                      {userItem.role || 'N/A'}
                     </span>
                   </td>
+                  {isAdmin && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {userItem.role !== 'CREATOR' && userItem.role !== 'ADMIN' && (
+                        <button
+                          onClick={() => handleUpgradeToCreator(userItem.id)}
+                          disabled={upgrading[userItem.id]}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {upgrading[userItem.id] ? 'Upgrading...' : 'Upgrade to Creator'}
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

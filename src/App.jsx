@@ -7,6 +7,7 @@ import CreateCourse from './components/CreateCourse';
 import CreateLesson from './components/CreateLesson';
 import Register from './components/Register';
 import Login from './components/Login';
+import Profile from './components/Profile';
 
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -34,25 +35,36 @@ function App() {
                   >
                     Lessons
                   </Link>
-                  <Link
-                    to="/users"
-                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  >
-                    Users
-                  </Link>
+                  {user?.role === 'ADMIN' && (
+                    <Link
+                      to="/users"
+                      className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    >
+                      Users
+                    </Link>
+                  )}
                 </div>
               </div>
               <div className="flex items-center space-x-4">
                 {isAuthenticated ? (
                   <>
-                    <span className="text-sm text-gray-700">
+                    <Link
+                      to="/profile"
+                      className="text-sm text-gray-700 hover:text-gray-900 px-2 py-1"
+                    >
                       {user?.name || user?.email}
                       {user?.role && (
-                        <span className="ml-2 px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">
+                        <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                          user.role === 'ADMIN'
+                            ? 'bg-purple-100 text-purple-800'
+                            : user.role === 'CREATOR'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-indigo-100 text-indigo-800'
+                        }`}>
                           {user.role}
                         </span>
                       )}
-                    </span>
+                    </Link>
                     <button
                       onClick={logout}
                       className="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out"
@@ -88,6 +100,7 @@ function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/courses/create" element={<CreateCourse />} />
             <Route path="/lessons/create" element={<CreateLesson />} />
           </Routes>

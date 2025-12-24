@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { lessonsApi, coursesApi } from '../api/api';
 
 function Lessons() {
+  const { user } = useAuth();
   const [lessons, setLessons] = useState([]);
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Check if user is CREATOR or ADMIN
+  const canCreateLesson = user?.role === 'CREATOR' || user?.role === 'ADMIN';
 
   useEffect(() => {
     loadLessons();
@@ -80,12 +85,14 @@ function Lessons() {
     <div className="px-4 py-6 sm:px-0">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Lessons</h2>
-        <Link
-          to="/lessons/create"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 ease-in-out"
-        >
-          + Create Lesson
-        </Link>
+        {canCreateLesson && (
+          <Link
+            to="/lessons/create"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 ease-in-out"
+          >
+            + Create Lesson
+          </Link>
+        )}
       </div>
 
       <div className="mb-6">

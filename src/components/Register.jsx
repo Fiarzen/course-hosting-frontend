@@ -9,7 +9,6 @@ function Register() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'STUDENT',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -67,7 +66,6 @@ function Register() {
         name: formData.name || undefined,
         email: formData.email,
         password: formData.password,
-        role: formData.role,
       };
 
       await usersApi.register(registrationData);
@@ -95,7 +93,7 @@ function Register() {
     <div className="px-4 py-6 sm:px-0">
       <div className="max-w-md mx-auto">
         <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center">Create Account</h2>
-        <p className="text-gray-600 text-center mb-6">Register as a student or course creator</p>
+        <p className="text-gray-600 text-center mb-6">Register as a student to start learning</p>
 
         <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4">
           {error && (
@@ -175,23 +173,6 @@ function Register() {
             />
           </div>
 
-          <div className="mb-6">
-            <label htmlFor="role" className="block text-gray-700 text-sm font-bold mb-2">
-              I want to register as *
-            </label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
-            >
-              <option value="STUDENT">Student - Enroll in courses and learn</option>
-              <option value="CREATOR">Course Creator - Create and teach courses</option>
-            </select>
-          </div>
-
           <div className="flex items-center justify-between">
             <Link
               to="/"
@@ -223,4 +204,5 @@ function Register() {
 }
 
 export default Register;
+
 

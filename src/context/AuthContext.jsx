@@ -69,11 +69,26 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    const storedCredentials = localStorage.getItem('auth_credentials');
+    if (storedCredentials) {
+      try {
+        const { email, password } = JSON.parse(storedCredentials);
+        const userData = await usersApi.getCurrentUser(email, password);
+        setUser(userData);
+        return userData;
+      } catch (err) {
+        console.error('Failed to refresh user:', err);
+      }
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
+    refreshUser,
     isAuthenticated: !!user,
   };
 

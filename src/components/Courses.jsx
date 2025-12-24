@@ -1,15 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { coursesApi } from '../api/api';
+import { useAuth } from '../context/AuthContext';
+import { coursesApi, enrollmentApi } from '../api/api';
 
 function Courses() {
+  const { isAuthenticated } = useAuth();
   const [courses, setCourses] = useState([]);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [enrolling, setEnrolling] = useState({});
 
   useEffect(() => {
     loadCourses();
-  }, []);
+    if (isAuthenticated) {
+      loadEnrolledCourses();
+    }
+  }, [isAuthenticated]);
 
   const loadCourses = async () => {
     try {
@@ -22,6 +29,35 @@ function Courses() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadEnrolledCourses = async () => {
+    try {
+      const data = await enrollmentApi.getMyCourses();
+      const enrolledIds = new Set(data.map(e => e.course.id));
+      setEnrolledCourseIds(enrolledIds);
+    } catch (err) {
+      console.error('Failed to load enrolled courses:', err);
+    }
+  };
+
+  const handleEnroll = async (courseId) => {
+    setEnrolling({ ...enrolling, [courseId]: true });
+    try {
+      await enrollmentApi.enrollInCourse(courseId);
+      setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
+      alert('Successfully enrolled in course!');
+    } catch (err) {
+      if (err.response?.status === 409) {
+        alert('You are already enrolled in this course.');
+        setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
+      } else {
+        alert('Failed to enroll in course. Please try again.');
+      }
+      console.error(err);
+    } finally {
+      setEnrolling({ ...enrolling, [courseId]: false });
     }
   };
 
@@ -74,8 +110,26 @@ function Courses() {
                     <span className="ml-2">{course.author.name || course.author.email}</span>
                   </div>
                 )}
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
                   <span className="text-sm text-indigo-600 font-medium">ID: {course.id}</span>
+                  {isAuthenticated && (
+                    enrolledCourseIds.has(course.id) ? (
+                      <Link
+                        to="/profile"
+                        className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded"
+                      >
+                        Enrolled
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => handleEnroll(course.id)}
+                        disabled={enrolling[course.id]}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {enrolling[course.id] ? 'Enrolling...' : 'Enroll'}
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
             </div>

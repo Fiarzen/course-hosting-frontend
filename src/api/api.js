@@ -91,6 +91,30 @@ export const usersApi = {
       api.defaults.auth = undefined;
     }
   },
+  upgradeUserToCreator: async (userId) => {
+    const response = await api.post(`/users/${userId}/upgrade-to-creator`);
+    return response.data;
+  },
+};
+
+// Enrollment API
+export const enrollmentApi = {
+  enrollInCourse: async (courseId) => {
+    const response = await api.post(`/enrollments/courses/${courseId}`);
+    return response.data;
+  },
+  getMyCourses: async () => {
+    const response = await api.get('/enrollments/my-courses');
+    return response.data;
+  },
+  completeLesson: async (lessonId) => {
+    const response = await api.post(`/enrollments/lessons/${lessonId}/complete`);
+    return response.data;
+  },
+  getCourseProgress: async (courseId) => {
+    const response = await api.get(`/enrollments/courses/${courseId}/progress`);
+    return response.data;
+  },
 };
 
 export default api;
