@@ -21,6 +21,11 @@ export const coursesApi = {
     const response = await api.post('/courses', courseData);
     return response.data;
   },
+  // Courses created by the currently authenticated creator/admin
+  getMyCreated: async () => {
+    const response = await api.get('/courses/my-created');
+    return response.data;
+  },
 };
 
 // Lessons API
@@ -31,6 +36,22 @@ export const lessonsApi = {
   },
   getByCourse: async (courseId) => {
     const response = await api.get(`/lessons/course/${courseId}`);
+    return response.data;
+  },
+  getById: async (lessonId) => {
+    const response = await api.get(`/lessons/${lessonId}`);
+    return response.data;
+  },
+  reorderForCourse: async (courseId, orderedLessonIds) => {
+    const response = await api.post(`/lessons/course/${courseId}/reorder`, orderedLessonIds);
+    return response.data;
+  },
+  delete: async (lessonId) => {
+    await api.delete(`/lessons/${lessonId}`);
+  },
+  update: async (lessonId, data) => {
+    // `data` can be JSON or FormData. Axios will set correct headers automatically.
+    const response = await api.put(`/lessons/${lessonId}`, data);
     return response.data;
   },
   create: async (lessonData, files = {}) => {

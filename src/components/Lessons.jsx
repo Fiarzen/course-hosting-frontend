@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { lessonsApi, coursesApi } from '../api/api';
+import { lessonsApi, coursesApi, enrollmentApi } from '../api/api';
 
 function Lessons() {
   const { user, isAuthenticated } = useAuth();

@@ -178,7 +178,9 @@ function CourseDetail() {
               {lessons.map((lesson, index) => {
                 const isCompleted = lessonProgress[lesson.id] || false;
                 const embedUrl = getEmbedUrl(lesson.videoUrl);
-                
+
+                const canViewContent = isAuthenticated && isEnrolled;
+
                 return (
                   <div
                     key={lesson.id}
@@ -191,15 +193,30 @@ function CourseDetail() {
                         <div className="flex items-center space-x-2 mb-2">
                           <span className="text-sm font-medium text-indigo-600">Lesson {index + 1}</span>
                           {isCompleted && (
-                            <span className="text-green-600 text-sm">✓ Completed</span>
+                            <span className="text-green-600 text-sm"> Completed</span>
                           )}
                         </div>
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">{lesson.title}</h3>
-                        <p className="text-gray-600 mb-4">{lesson.content || 'No content'}</p>
+                        {canViewContent && (
+                          <p className="text-gray-600 mb-4">{lesson.content || 'No content'}</p>
+                        )}
+                        {!canViewContent && (
+                          <p className="text-gray-500 text-sm mb-4">
+                            Enroll in this course to view full lesson content.
+                          </p>
+                        )}
+                      </div>
+                      <div className="ml-4 flex flex-col space-y-2">
+                        <button
+                          onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded"
+                        >
+                          View Lesson
+                        </button>
                       </div>
                     </div>
 
-                    {embedUrl && (
+                    {canViewContent && embedUrl && (
                       <div className="mb-4">
                         <div className="relative pb-[56.25%] h-0 overflow-hidden rounded">
                           <iframe
@@ -213,7 +230,7 @@ function CourseDetail() {
                       </div>
                     )}
 
-                    {lesson.pdfUrl && (
+                    {canViewContent && lesson.pdfUrl && (
                       <div className="mb-4">
                         <a
                           href={lesson.pdfUrl}
@@ -221,7 +238,7 @@ function CourseDetail() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center text-red-600 hover:text-red-800"
                         >
-                          📄 View PDF
+                           View PDF
                         </a>
                       </div>
                     )}

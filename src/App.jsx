@@ -9,6 +9,9 @@ import Register from './components/Register';
 import Login from './components/Login';
 import Profile from './components/Profile';
 import CourseDetail from './components/CourseDetail';
+import LessonView from './components/LessonView';
+import EditLesson from './components/EditLesson';
+import MyCourses from './components/MyCourses';
 
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -30,12 +33,14 @@ function App() {
                   >
                     Courses
                   </Link>
-                  <Link
-                    to="/lessons"
-                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  >
-                    Lessons
-                  </Link>
+                  {(user?.role === 'CREATOR' || user?.role === 'ADMIN') && (
+                    <Link
+                      to="/my-courses"
+                      className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    >
+                      My Courses
+                    </Link>
+                  )}
                   {user?.role === 'ADMIN' && (
                     <Link
                       to="/users"
@@ -98,6 +103,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Courses />} />
             <Route path="/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonView />} />
+            <Route path="/courses/:courseId/lessons/:lessonId/edit" element={<EditLesson />} />
             <Route path="/lessons" element={<Lessons />} />
             <Route path="/users" element={<Users />} />
             <Route path="/login" element={<Login />} />
@@ -105,6 +112,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/courses/create" element={<CreateCourse />} />
             <Route path="/lessons/create" element={<CreateLesson />} />
+            <Route path="/my-courses" element={<MyCourses />} />
           </Routes>
         </main>
       </div>

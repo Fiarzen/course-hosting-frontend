@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { lessonsApi, coursesApi } from '../api/api';
 
 function CreateLesson() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -19,7 +20,17 @@ function CreateLesson() {
 
   useEffect(() => {
     loadCourses();
-  }, []);
+
+    // If a courseId is provided in the query string, preselect it
+    const params = new URLSearchParams(location.search);
+    const qsCourseId = params.get('courseId');
+    if (qsCourseId) {
+      setFormData((prev) => ({
+        ...prev,
+        courseId: qsCourseId,
+      }));
+    }
+  }, [location.search]);
 
   const loadCourses = async () => {
     try {
@@ -100,7 +111,8 @@ function CreateLesson() {
         },
         files
       );
-      navigate('/lessons');
+      // After creating a lesson, go to the course page it belongs to
+      navigate(`/courses/${formData.courseId}`);
     } catch (err) {
       setError('Failed to create lesson. Please try again.');
       console.error(err);
