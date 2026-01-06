@@ -147,6 +147,9 @@ export const enrollmentApi = {
     const response = await api.post(`/enrollments/courses/${courseId}`);
     return response.data;
   },
+  unenrollFromCourse: async (courseId) => {
+    await api.delete(`/enrollments/courses/${courseId}`);
+  },
   getMyCourses: async () => {
     const response = await api.get('/enrollments/my-courses');
     return response.data;

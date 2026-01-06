@@ -12,6 +12,7 @@ function Profile() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseProgress, setCourseProgress] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(false);
+  const [unenrolling, setUnenrolling] = useState({});
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -60,6 +61,26 @@ function Profile() {
       }
     } catch (err) {
       console.error('Failed to mark lesson as complete:', err);
+    }
+  };
+
+  const handleUnenroll = async (courseId) => {
+    if (!window.confirm('Are you sure you want to unenroll from this course? Your progress will be removed.')) {
+      return;
+    }
+    setUnenrolling((prev) => ({ ...prev, [courseId]: true }));
+    try {
+      await enrollmentApi.unenrollFromCourse(courseId);
+      setEnrolledCourses((prev) => prev.filter((e) => e.course.id !== courseId));
+      if (selectedCourse?.course.id === courseId) {
+        setSelectedCourse(null);
+        setCourseProgress(null);
+      }
+    } catch (err) {
+      console.error('Failed to unenroll from course:', err);
+      alert(err.response?.data?.error || 'Failed to unenroll from course. Please try again.');
+    } finally {
+      setUnenrolling((prev) => ({ ...prev, [courseId]: false }));
     }
   };
 
@@ -156,12 +177,21 @@ function Profile() {
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleViewProgress(enrollment)}
-                      className="ml-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded"
-                    >
-                      View Progress
-                    </button>
+                    <div className="flex flex-col space-y-2 ml-4 sm:space-y-0 sm:space-x-2 sm:flex-row">
+                      <button
+                        onClick={() => handleViewProgress(enrollment)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded"
+                      >
+                        View Progress
+                      </button>
+                      <button
+                        onClick={() => handleUnenroll(enrollment.course.id)}
+                        disabled={unenrolling[enrollment.course.id]}
+                        className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {unenrolling[enrollment.course.id] ? 'Unenrolling...' : 'Unenroll'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
