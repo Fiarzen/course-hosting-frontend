@@ -15,3 +15,9 @@
   to = "http://54.216.229.229:8080/files/:splat"
   status = 200
   force = true
+
+# SPA fallback: send all other routes to index.html so React Router can handle them
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
