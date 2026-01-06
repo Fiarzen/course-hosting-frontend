@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { usersApi } from '../api/api';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { usersApi } from "../api/api";
 
 function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -26,24 +26,24 @@ function Register() {
 
   const validateForm = () => {
     if (!formData.email || !formData.password) {
-      setError('Email and password are required');
+      setError("Email and password are required");
       return false;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError("Password must be at least 6 characters long");
       return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return false;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       return false;
     }
 
@@ -70,18 +70,20 @@ function Register() {
 
       await usersApi.register(registrationData);
       setSuccess(true);
-      
+
       // Redirect to login or home page after 2 seconds
       setTimeout(() => {
-        navigate('/');
+        navigate("/");
       }, 2000);
     } catch (err) {
       if (err.response && err.response.data && err.response.data.error) {
         setError(err.response.data.error);
       } else if (err.response && err.response.status === 409) {
-        setError('This email is already registered. Please use a different email or try logging in.');
+        setError(
+          "This email is already registered. Please use a different email or try logging in."
+        );
       } else {
-        setError('Registration failed. Please try again.');
+        setError("Registration failed. Please try again.");
       }
       console.error(err);
     } finally {
@@ -92,25 +94,41 @@ function Register() {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="max-w-md mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center">Create Account</h2>
-        <p className="text-gray-600 text-center mb-6">Register as a student to start learning</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center">
+          Create Account
+        </h2>
+        <p className="text-gray-600 text-center mb-6">
+          Register as a student to start learning
+        </p>
 
-        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4"
+        >
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+            <div
+              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4"
+              role="alert"
+            >
               {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4" role="alert">
+            <div
+              className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4"
+              role="alert"
+            >
               <strong className="font-bold">Success! </strong>
               <span>Account created successfully. Redirecting...</span>
             </div>
           )}
 
           <div className="mb-4">
-            <label htmlFor="name" className="block text-gray-700 text-sm font-bold mb-2">
+            <label
+              htmlFor="name"
+              className="block text-gray-700 text-sm font-bold mb-2"
+            >
               Name (Optional)
             </label>
             <input
@@ -125,7 +143,10 @@ function Register() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
+            <label
+              htmlFor="email"
+              className="block text-gray-700 text-sm font-bold mb-2"
+            >
               Email *
             </label>
             <input
@@ -141,7 +162,10 @@ function Register() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="password" className="block text-gray-700 text-sm font-bold mb-2">
+            <label
+              htmlFor="password"
+              className="block text-gray-700 text-sm font-bold mb-2"
+            >
               Password *
             </label>
             <input
@@ -158,7 +182,10 @@ function Register() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="confirmPassword" className="block text-gray-700 text-sm font-bold mb-2">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-gray-700 text-sm font-bold mb-2"
+            >
               Confirm Password *
             </label>
             <input
@@ -185,15 +212,22 @@ function Register() {
               disabled={loading || success}
               className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating Account...' : success ? 'Account Created!' : 'Register'}
+              {loading
+                ? "Creating Account..."
+                : success
+                ? "Account Created!"
+                : "Register"}
             </button>
           </div>
 
           <div className="mt-4 text-center">
             <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/" className="text-indigo-600 hover:text-indigo-800 font-medium">
-                Go to Home
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                Go to Login
               </Link>
             </p>
           </div>
@@ -204,5 +238,3 @@ function Register() {
 }
 
 export default Register;
-
-
