@@ -146,3 +146,52 @@ code {
 .dark .theme-toggle__thumb {
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.9);
 }
+
+/* Global dark mode typography tweaks for Tailwind utility classes */
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  color: #e5e7eb;
+}
+
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  color: #d1d5db;
+}
+
+.dark .text-gray-400,
+.dark .text-gray-300 {
+  color: #9ca3af;
+}
+
+/* Card and surface backgrounds */
+.dark .bg-white,
+.dark .bg-gray-50 {
+  background-color: #020617;
+}
+
+.dark .bg-gray-100 {
+  background-color: #020617;
+}
+
+.dark .bg-gray-200 {
+  background-color: #020617;
+}
+
+/* Borders and dividers on dark surfaces */
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  border-color: #1f2937;
+}
+
+/* Tables and hover rows */
+.dark .hover\:bg-gray-50:hover {
+  background-color: #020617;
+}
+
+/* Nav link colors on dark background */
+.dark .branch-nav a,
+.dark .branch-nav button,
+.dark .branch-nav span {
+  color: #e5e7eb;
+}
