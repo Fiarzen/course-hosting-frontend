@@ -5,9 +5,9 @@ function Home() {
     <div className="px-4 py-10 sm:px-0">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-          Welcome to mindleaf
+          Welcome to MindLeaf
         </h1>
-        <p className="text-lg text-gray-700 mb-6">
+        <p className="tnpmext-lg text-gray-700 mb-6">
           Browse courses, follow lessons, and track your progress.
         </p>
         <div className="flex flex-col sm:flex-row sm:space-x-3 sm:space-y-0 space-y-3">
