@@ -64,14 +64,30 @@ function Users() {
     setResetting({ ...resetting, [userId]: true });
     try {
       const result = await usersApi.resetPassword(userId);
-      const resetPath = result?.resetPath || (result?.resetToken ? `/reset-password?token=${result.resetToken}` : '');
 
-      if (!resetPath) {
+      let fullUrl = '';
+
+      // Prefer constructing the SPA link ourselves using the token so it always matches
+      // the front-end route (/reset-password?token=...).
+      if (result?.resetToken) {
+        const path = `/reset-password?token=${encodeURIComponent(result.resetToken)}`;
+        fullUrl = `${window.location.origin}${path}`;
+      } else if (result?.resetPath) {
+        const rp = result.resetPath;
+        if (/^https?:\/\//i.test(rp)) {
+          // Backend already returned a full URL; use as-is.
+          fullUrl = rp;
+        } else {
+          // Treat resetPath as a relative path and normalize leading slash.
+          const normalizedPath = rp.startsWith('/') ? rp : `/${rp}`;
+          fullUrl = `${window.location.origin}${normalizedPath}`;
+        }
+      }
+
+      if (!fullUrl) {
         alert('Password reset link could not be generated. Please try again.');
         return;
       }
-
-      const fullUrl = `${window.location.origin}${resetPath}`;
 
       // Show a prompt so the admin can copy the link and send it to the user
       window.prompt('Copy this password reset link and send it to the user:', fullUrl);
