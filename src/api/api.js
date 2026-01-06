@@ -35,6 +35,9 @@ export const coursesApi = {
     const response = await api.put(`/courses/${courseId}/access`, payload);
     return response.data;
   },
+  delete: async (courseId) => {
+    await api.delete(`/courses/${courseId}`);
+  },
 };
 
 // Lessons API

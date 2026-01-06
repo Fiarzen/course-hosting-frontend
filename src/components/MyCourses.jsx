@@ -15,6 +15,7 @@ function MyCourses() {
   const [deletingLesson, setDeletingLesson] = useState({});
   const [savingAccess, setSavingAccess] = useState({});
   const [accessForm, setAccessForm] = useState({}); // { [courseId]: { restrictedToAllowList, allowedEmailsText } }
+  const [deletingCourse, setDeletingCourse] = useState({});
 
   const isCreatorOrAdmin = user?.role === 'CREATOR' || user?.role === 'ADMIN';
 
@@ -125,6 +126,22 @@ function MyCourses() {
     }));
   };
 
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('Are you sure you want to delete this course? This will remove all its lessons and enrollments.')) {
+      return;
+    }
+    setDeletingCourse((prev) => ({ ...prev, [courseId]: true }));
+    try {
+      await coursesApi.delete(courseId);
+      setCourses((prev) => prev.filter((c) => c.id !== courseId));
+    } catch (err) {
+      console.error('Failed to delete course:', err);
+      alert(err.response?.data?.error || 'Failed to delete course. Please try again.');
+    } finally {
+      setDeletingCourse((prev) => ({ ...prev, [courseId]: false }));
+    }
+  };
+
   const handleSaveAccess = async (courseId) => {
     const form = accessForm[courseId];
     const course = courses.find((c) => c.id === courseId);
@@ -233,6 +250,13 @@ function MyCourses() {
                       className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium py-1 px-3 rounded"
                     >
                       Manage Lessons
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCourse(course.id)}
+                      disabled={deletingCourse[course.id]}
+                      className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deletingCourse[course.id] ? 'Deleting...' : 'Delete Course'}
                     </button>
                   </div>
                 </div>
