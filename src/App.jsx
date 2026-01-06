@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
+import Home from './components/Home';
 import Courses from './components/Courses';
 import Lessons from './components/Lessons';
 import Users from './components/Users';
@@ -51,11 +52,11 @@ function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between sm:h-16">
               <div className="flex items-center justify-between sm:justify-start gap-3">
-                <div className="flex-shrink-0 flex items-center">
+                <Link to="/" className="flex-shrink-0 flex items-center">
                   <h1 className="branch-heading branch-nav__brand text-xl sm:text-2xl font-semibold">
                     mindleaf
                   </h1>
-                </div>
+                </Link>
                 <button
                   type="button"
                   className="inline-flex items-center justify-center rounded-md p-2 text-emerald-900 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500 sm:hidden"
@@ -88,7 +89,7 @@ function App() {
                 </button>
                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                   <Link
-                    to="/"
+                    to="/courses"
                     className="border-emerald-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
                   >
                     Courses
@@ -169,7 +170,7 @@ function App() {
             {mobileNavOpen && (
               <div className="mt-2 space-y-1 border-t border-emerald-50 pt-2 pb-3 sm:hidden">
                 <Link
-                  to="/"
+                  to="/courses"
                   className="block rounded-md px-3 py-2 text-base font-medium text-emerald-900 hover:bg-emerald-50"
                   onClick={() => setMobileNavOpen(false)}
                 >
@@ -200,7 +201,8 @@ function App() {
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <Routes>
-            <Route path="/" element={<Courses />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:courseId" element={<CourseDetail />} />
             <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonView />} />
             <Route path="/courses/:courseId/lessons/:lessonId/edit" element={<EditLesson />} />

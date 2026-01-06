@@ -178,10 +178,10 @@ function CourseDetail() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/courses')}
             className="text-indigo-600 hover:text-indigo-800 mb-4"
           >
-            ← Back to Courses
+             Back to Courses
           </button>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">{course?.title}</h1>
           <p className="text-gray-600 mb-4">{course?.description || 'No description'}</p>
@@ -204,7 +204,14 @@ function CourseDetail() {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Lessons</h2>
           {lessons.length === 0 ? (
-            <p className="text-gray-500">No lessons available for this course yet.</p>
+            !isAuthenticated ? (
+              <p className="text-gray-500">
+                Lesson content can't be viewed while logged out. Please log in to see lessons for this
+                course.
+              </p>
+            ) : (
+              <p className="text-gray-500">No lessons available for this course yet.</p>
+            )
           ) : (
             <div className="space-y-6">
               {lessons.map((lesson, index) => {

@@ -46,7 +46,7 @@ function CreateCourse() {
       };
 
       await coursesApi.create(courseData);
-      navigate('/');
+      navigate('/courses');
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to create course. Please make sure you are logged in as a CREATOR or ADMIN.';
       setError(errorMessage);
@@ -143,7 +143,7 @@ function CreateCourse() {
           <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/courses')}
               className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             >
               Cancel

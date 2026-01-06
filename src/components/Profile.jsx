@@ -136,7 +136,7 @@ function Profile() {
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg">You haven't enrolled in any courses yet.</p>
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/courses')}
                 className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
               >
                 Browse Courses
