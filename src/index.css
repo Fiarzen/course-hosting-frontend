@@ -70,3 +70,79 @@ code {
   background: rgba(79, 124, 74, 0.1);
   color: #1f2933;
 }
+
+:root.dark {
+  --branch-bg-from: #020617;
+  --branch-bg-to: #0f172a;
+  --branch-accent: #a4f9c8;
+  --branch-accent-soft: #4ade80;
+  color-scheme: dark;
+}
+
+.dark body {
+  color: #e5e7eb;
+  background-color: var(--branch-bg-from);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(15, 23, 42, 0.9) 0, transparent 55%),
+    radial-gradient(circle at 90% 80%, rgba(22, 163, 74, 0.25) 0, transparent 55%),
+    linear-gradient(to bottom right, var(--branch-bg-from), var(--branch-bg-to));
+}
+
+.dark .branch-nav {
+  background: rgba(15, 23, 42, 0.96);
+  border-bottom-color: rgba(71, 85, 105, 0.8);
+}
+
+.dark .branch-nav__brand {
+  color: var(--branch-accent-soft);
+}
+
+.dark .branch-pill {
+  background: rgba(148, 163, 184, 0.22);
+  color: #e5e7eb;
+}
+
+/* Dark mode slider toggle */
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  border-radius: 9999px;
+  border: 1px solid rgba(16, 185, 129, 0.8);
+  background: #ecfdf3;
+  padding: 2px;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-in-out,
+    border-color 150ms ease-in-out;
+}
+
+.theme-toggle__thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #16a34a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.4);
+  transform: translateX(0);
+  transition: transform 150ms ease-in-out, background-color 150ms ease-in-out;
+}
+
+.theme-toggle--dark {
+  background: #020617;
+  border-color: rgba(74, 222, 128, 0.9);
+}
+
+.theme-toggle--dark .theme-toggle__thumb {
+  transform: translateX(18px);
+  background: #4ade80;
+}
+
+.dark .theme-toggle {
+  background: #020617;
+}
+
+.dark .theme-toggle__thumb {
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.9);
+}

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import Courses from './components/Courses';
 import Lessons from './components/Lessons';
@@ -18,6 +18,31 @@ import ResetPassword from './components/ResetPassword';
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+
+    const stored = window.localStorage.getItem('theme');
+    if (stored === 'dark' || stored === 'light') {
+      return stored === 'dark';
+    }
+
+    return (
+      window.matchMedia &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+    );
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    if (isDarkMode) {
+      root.classList.add('dark');
+      window.localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      window.localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
 
   return (
     <Router>
@@ -87,6 +112,14 @@ function App() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-4 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsDarkMode((prev) => !prev)}
+                  className={`theme-toggle ${isDarkMode ? 'theme-toggle--dark' : ''}`}
+                  aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  <span className="theme-toggle__thumb" aria-hidden="true" />
+                </button>
                 {isAuthenticated ? (
                   <>
                     <Link
