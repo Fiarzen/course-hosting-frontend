@@ -8,7 +8,7 @@ function Home() {
           Welcome to MindLeaf
         </h1>
         <p className="tnpmext-lg text-gray-700 mb-6">
-          Browse courses, follow lessons, and track your progress.
+          Browse courses, follow lessons and track your progress.
         </p>
         <div className="flex flex-col sm:flex-row sm:space-x-3 sm:space-y-0 space-y-3">
           <Link
@@ -40,3 +40,4 @@ function Home() {
 }
 
 export default Home;
+
