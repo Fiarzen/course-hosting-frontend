@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { coursesApi, enrollmentApi } from '../api/api';
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { coursesApi, enrollmentApi } from "../api/api";
 
 function Courses() {
   const { isAuthenticated, user } = useAuth();
@@ -12,8 +12,7 @@ function Courses() {
   const [enrolling, setEnrolling] = useState({});
 
   // Check if user can create courses
-  const canCreateCourse = user?.role === 'CREATOR' || user?.role === 'ADMIN';
-
+  const canCreateCourse = user?.role === "CREATOR" || user?.role === "ADMIN";
 
   useEffect(() => {
     loadCourses();
@@ -29,7 +28,9 @@ function Courses() {
       setCourses(data);
       setError(null);
     } catch (err) {
-      setError('Failed to load courses. Make sure the backend is running on http://localhost:8080');
+      setError(
+        "Failed to load courses. Backend may be need time to start, try again in 30 seconds.",
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -39,10 +40,10 @@ function Courses() {
   const loadEnrolledCourses = async () => {
     try {
       const data = await enrollmentApi.getMyCourses();
-      const enrolledIds = new Set(data.map(e => e.course.id));
+      const enrolledIds = new Set(data.map((e) => e.course.id));
       setEnrolledCourseIds(enrolledIds);
     } catch (err) {
-      console.error('Failed to load enrolled courses:', err);
+      console.error("Failed to load enrolled courses:", err);
     }
   };
 
@@ -51,20 +52,22 @@ function Courses() {
     try {
       await enrollmentApi.enrollInCourse(courseId);
       setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
-      alert('Successfully enrolled in course!');
+      alert("Successfully enrolled in course!");
     } catch (err) {
       const status = err.response?.status;
       const backendMessage = err.response?.data?.error;
 
       if (status === 409) {
-        alert('You are already enrolled in this course.');
+        alert("You are already enrolled in this course.");
         setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
-      } else if (status === 403 && backendMessage?.includes('allowlist')) {
-        alert('This course is restricted to an allowlist of users, and your account is not on that list. Please contact the course creator if you believe this is a mistake.');
+      } else if (status === 403 && backendMessage?.includes("allowlist")) {
+        alert(
+          "This course is restricted to an allowlist of users, and your account is not on that list. Please contact the course creator if you believe this is a mistake.",
+        );
       } else if (backendMessage) {
         alert(backendMessage);
       } else {
-        alert('Failed to enroll in course. Please try again.');
+        alert("Failed to enroll in course. Please try again.");
       }
 
       console.error(err);
@@ -83,7 +86,10 @@ function Courses() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <div
+        className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative"
+        role="alert"
+      >
         <strong className="font-bold">Error: </strong>
         <span className="block sm:inline">{error}</span>
       </div>
@@ -106,7 +112,9 @@ function Courses() {
 
       {courses.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No courses found. Create your first course!</p>
+          <p className="text-gray-500 text-lg">
+            No courses found. Create your first course!
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -117,19 +125,27 @@ function Courses() {
             >
               <div className="p-6">
                 <Link to={`/courses/${course.id}`} className="block">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-indigo-600">{course.title}</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-indigo-600">
+                    {course.title}
+                  </h3>
                 </Link>
-                <p className="text-gray-600 mb-4 line-clamp-3">{course.description || 'No description'}</p>
+                <p className="text-gray-600 mb-4 line-clamp-3">
+                  {course.description || "No description"}
+                </p>
                 {course.author && (
                   <div className="flex items-center text-sm text-gray-500">
                     <span className="font-medium">Author:</span>
-                    <span className="ml-2">{course.author.name || course.author.email}</span>
+                    <span className="ml-2">
+                      {course.author.name || course.author.email}
+                    </span>
                   </div>
                 )}
                 <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                  <span className="text-sm text-indigo-600 font-medium">ID: {course.id}</span>
-                  {isAuthenticated && (
-                    enrolledCourseIds.has(course.id) ? (
+                  <span className="text-sm text-indigo-600 font-medium">
+                    ID: {course.id}
+                  </span>
+                  {isAuthenticated &&
+                    (enrolledCourseIds.has(course.id) ? (
                       <Link
                         to="/profile"
                         className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded"
@@ -142,10 +158,9 @@ function Courses() {
                         disabled={enrolling[course.id]}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {enrolling[course.id] ? 'Enrolling...' : 'Enroll'}
+                        {enrolling[course.id] ? "Enrolling..." : "Enroll"}
                       </button>
-                    )
-                  )}
+                    ))}
                 </div>
               </div>
             </div>
@@ -157,4 +172,3 @@ function Courses() {
 }
 
 export default Courses;
-
