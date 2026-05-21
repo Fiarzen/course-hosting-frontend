@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function Home() {
+  const { isAuthenticated } = useAuth();
   return (
     <div className="px-4 py-10 sm:px-0">
       <div className="max-w-3xl mx-auto">
@@ -17,12 +19,14 @@ function Home() {
           >
             Browse courses
           </Link>
-          <Link
-            to="/register"
-            className="inline-flex items-center justify-center border border-emerald-200 text-emerald-800 hover:bg-emerald-50 font-medium px-6 py-3 rounded-md transition"
-          >
-            Create a learning account
-          </Link>
+          {!isAuthenticated && (
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center border border-emerald-200 text-emerald-800 hover:bg-emerald-50 font-medium px-6 py-3 rounded-md transition"
+            >
+              Create a learning account
+            </Link>
+          )}
         </div>
         <div className="mt-8 text-sm text-gray-500 leading-relaxed">
           <p className="mb-2">
