@@ -1,7 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { coursesApi, lessonsApi } from '../api/api';
+import { coursesApi, lessonsApi, paymentsApi } from '../api/api';
+
+const CURRENCY_OPTIONS = [
+  { value: 'gbp', label: 'GBP (£)' },
+  { value: 'usd', label: 'USD ($)' },
+  { value: 'eur', label: 'EUR (€)' },
+];
+
+function formatPrice(priceCents, currency) {
+  if (!priceCents || !currency) return null;
+  try {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(priceCents / 100);
+  } catch {
+    return `${currency.toUpperCase()} ${(priceCents / 100).toFixed(2)}`;
+  }
+}
 
 function MyCourses() {
   const navigate = useNavigate();
@@ -16,6 +34,8 @@ function MyCourses() {
   const [savingAccess, setSavingAccess] = useState({});
   const [accessForm, setAccessForm] = useState({}); // { [courseId]: { restrictedToAllowList, allowedEmailsText } }
   const [deletingCourse, setDeletingCourse] = useState({});
+  const [pricingForm, setPricingForm] = useState({}); // { [courseId]: { isPaid, priceInput, currency } }
+  const [savingPricing, setSavingPricing] = useState({});
 
   const isCreatorOrAdmin = user?.role === 'CREATOR' || user?.role === 'ADMIN';
 
@@ -171,6 +191,62 @@ function MyCourses() {
     }
   };
 
+  const getPricingForm = (course) => {
+    const form = pricingForm[course.id];
+    return {
+      isPaid: form?.isPaid ?? course.isPaid ?? false,
+      priceInput: form?.priceInput ?? (course.priceCents ? (course.priceCents / 100).toFixed(2) : ''),
+      currency: form?.currency ?? course.currency ?? 'gbp',
+    };
+  };
+
+  const handlePricingChange = (courseId, field, value) => {
+    setPricingForm((prev) => ({
+      ...prev,
+      [courseId]: {
+        ...getPricingForm({ id: courseId, ...courses.find((c) => c.id === courseId) }),
+        ...prev[courseId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSavePricing = async (courseId) => {
+    const form = getPricingForm(courses.find((c) => c.id === courseId) || { id: courseId });
+    setSavingPricing((prev) => ({ ...prev, [courseId]: true }));
+    try {
+      let priceCents = null;
+      if (form.isPaid) {
+        const parsed = parseFloat(form.priceInput);
+        if (isNaN(parsed) || parsed <= 0) {
+          alert('Please enter a valid price greater than 0.');
+          return;
+        }
+        priceCents = Math.round(parsed * 100);
+      }
+      const updated = await paymentsApi.updatePricing(courseId, {
+        isPaid: form.isPaid,
+        priceCents,
+        currency: form.isPaid ? form.currency : null,
+      });
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId
+            ? { ...c, isPaid: updated.isPaid, priceCents: updated.priceCents, currency: updated.currency }
+            : c
+        )
+      );
+      // Clear local form overrides so display reverts to saved state
+      setPricingForm((prev) => ({ ...prev, [courseId]: undefined }));
+      alert('Pricing saved.');
+    } catch (err) {
+      console.error('Failed to save pricing:', err);
+      alert(err.response?.data?.error || 'Failed to save pricing. Please try again.');
+    } finally {
+      setSavingPricing((prev) => ({ ...prev, [courseId]: false }));
+    }
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -229,6 +305,15 @@ function MyCourses() {
                         <span className="text-red-600 font-medium">Restricted to allowlist</span>
                       ) : (
                         <span className="text-green-600">Open to all enrolled users</span>
+                      )}
+                    </p>
+                    <p className="text-xs mt-1">
+                      {course.isPaid ? (
+                        <span className="text-amber-700 font-medium">
+                          Paid — {formatPrice(course.priceCents, course.currency) || '(price not set)'}
+                        </span>
+                      ) : (
+                        <span className="text-green-600">Free</span>
                       )}
                     </p>
                   </div>
@@ -313,6 +398,56 @@ function MyCourses() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Pricing management */}
+                    {(() => {
+                      const pf = getPricingForm(course);
+                      return (
+                        <div className="mb-4 border border-gray-200 rounded p-3 bg-gray-50">
+                          <h5 className="text-sm font-semibold text-gray-800 mb-2">Pricing</h5>
+                          <label className="inline-flex items-center mb-2">
+                            <input
+                              type="checkbox"
+                              checked={pf.isPaid}
+                              onChange={(e) => handlePricingChange(course.id, 'isPaid', e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span className="text-xs text-gray-700 font-medium">Paid course</span>
+                          </label>
+                          {pf.isPaid && (
+                            <div className="flex gap-2 mt-1">
+                              <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={pf.priceInput}
+                                onChange={(e) => handlePricingChange(course.id, 'priceInput', e.target.value)}
+                                className="text-xs border rounded px-2 py-1 w-24 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                placeholder="9.99"
+                              />
+                              <select
+                                value={pf.currency}
+                                onChange={(e) => handlePricingChange(course.id, 'currency', e.target.value)}
+                                className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              >
+                                {CURRENCY_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              disabled={savingPricing[course.id]}
+                              onClick={() => handleSavePricing(course.id)}
+                              className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {savingPricing[course.id] ? 'Saving...' : 'Save pricing'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {lessonsByCourse[course.id].length === 0 ? (
                       <p className="text-gray-500 text-sm">No lessons yet.</p>

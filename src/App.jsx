@@ -15,6 +15,8 @@ import LessonView from './components/LessonView';
 import EditLesson from './components/EditLesson';
 import MyCourses from './components/MyCourses';
 import ResetPassword from './components/ResetPassword';
+import PaymentSuccess from './components/PaymentSuccess';
+import PaymentCancel from './components/PaymentCancel';
 
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -215,6 +217,8 @@ function App() {
             <Route path="/lessons/create" element={<CreateLesson />} />
             <Route path="/my-courses" element={<MyCourses />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/cancel" element={<PaymentCancel />} />
           </Routes>
         </main>
       </div>

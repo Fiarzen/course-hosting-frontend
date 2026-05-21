@@ -164,5 +164,21 @@ export const enrollmentApi = {
   },
 };
 
+// Payments API
+export const paymentsApi = {
+  createCheckoutSession: async (courseId) => {
+    const response = await api.post(`/payments/courses/${courseId}/checkout-session`);
+    return response.data; // { purchaseId, courseId, status, checkoutSessionId, checkoutUrl, expiresAt, reused }
+  },
+  getPaymentStatus: async (courseId) => {
+    const response = await api.get(`/payments/courses/${courseId}/status`);
+    return response.data; // { courseId, isPaid, priceCents, currency, isEnrolled, purchase, canEnrollDirectly }
+  },
+  updatePricing: async (courseId, { isPaid, priceCents, currency }) => {
+    const response = await api.put(`/courses/${courseId}/pricing`, { isPaid, priceCents, currency });
+    return response.data; // { courseId, isPaid, priceCents, currency }
+  },
+};
+
 export default api;
 
