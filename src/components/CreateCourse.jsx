@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { coursesApi } from '../api/api';
 
+const CURRENCY_OPTIONS = [
+  { value: 'gbp', label: 'GBP (£)' },
+  { value: 'usd', label: 'USD ($)' },
+  { value: 'eur', label: 'EUR (€)' },
+];
+
 function CreateCourse() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -11,6 +17,9 @@ function CreateCourse() {
     description: '',
     restrictedToAllowList: false,
     allowedEmailsText: '',
+    isPaid: false,
+    priceInput: '',
+    currency: 'gbp',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -29,26 +38,38 @@ function CreateCourse() {
     setError(null);
 
     try {
-      // Parse allowed emails from textarea
       const raw = formData.allowedEmailsText || '';
       const allowedEmails = raw
         .split(/[,\n]/)
         .map((e) => e.trim().toLowerCase())
         .filter((e) => e.length > 0);
 
-      // Use current logged-in user as author
+      let priceCents = null;
+      if (formData.isPaid) {
+        const parsed = parseFloat(formData.priceInput);
+        if (isNaN(parsed) || parsed <= 0) {
+          setError('Please enter a valid price greater than 0.');
+          setLoading(false);
+          return;
+        }
+        priceCents = Math.round(parsed * 100);
+      }
+
       const courseData = {
         title: formData.title,
         description: formData.description,
-        author: user, // Current user is the author
+        authorId: user?.id,
         restrictedToAllowList: formData.restrictedToAllowList,
         allowedEmails,
+        isPaid: formData.isPaid,
+        priceCents: formData.isPaid ? priceCents : null,
+        currency: formData.isPaid ? formData.currency : null,
       };
 
       await coursesApi.create(courseData);
       navigate('/courses');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to create course. Please make sure you are logged in as a CREATOR or ADMIN.';
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to create course. Please make sure you are logged in as a CREATOR or ADMIN.';
       setError(errorMessage);
       console.error(err);
     } finally {
@@ -99,6 +120,60 @@ function CreateCourse() {
             />
           </div>
 
+          {/* Pricing */}
+          <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Pricing</h3>
+            <label className="inline-flex items-center mb-3">
+              <input
+                type="checkbox"
+                name="isPaid"
+                checked={formData.isPaid}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <span className="text-gray-700 text-sm font-medium">This is a paid course</span>
+            </label>
+
+            {formData.isPaid && (
+              <div className="flex gap-3 mt-2">
+                <div className="flex-1">
+                  <label htmlFor="priceInput" className="block text-gray-700 text-xs font-bold mb-1">
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    id="priceInput"
+                    name="priceInput"
+                    value={formData.priceInput}
+                    onChange={handleChange}
+                    min="0.01"
+                    step="0.01"
+                    required={formData.isPaid}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 text-sm leading-tight focus:outline-none focus:border-indigo-500"
+                    placeholder="9.99"
+                  />
+                </div>
+                <div className="w-36">
+                  <label htmlFor="currency" className="block text-gray-700 text-xs font-bold mb-1">
+                    Currency
+                  </label>
+                  <select
+                    id="currency"
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleChange}
+                    className="shadow border rounded w-full py-2 px-3 text-gray-700 text-sm leading-tight focus:outline-none focus:border-indigo-500"
+                  >
+                    {CURRENCY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Access control */}
           <div className="mb-4">
             <label className="inline-flex items-center">
               <input
@@ -163,4 +238,3 @@ function CreateCourse() {
 }
 
 export default CreateCourse;
-

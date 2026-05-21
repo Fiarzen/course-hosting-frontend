@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { coursesApi, enrollmentApi } from "../api/api";
+import { coursesApi, enrollmentApi, paymentsApi } from "../api/api";
+
+function formatPrice(priceCents, currency) {
+  if (!priceCents || !currency) return null;
+  try {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(priceCents / 100);
+  } catch {
+    return `${currency.toUpperCase()} ${(priceCents / 100).toFixed(2)}`;
+  }
+}
 
 function Courses() {
   const { isAuthenticated, user } = useAuth();
@@ -10,8 +22,8 @@ function Courses() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [enrolling, setEnrolling] = useState({});
+  const [checkingOut, setCheckingOut] = useState({});
 
-  // Check if user can create courses
   const canCreateCourse = user?.role === "CREATOR" || user?.role === "ADMIN";
 
   useEffect(() => {
@@ -29,7 +41,7 @@ function Courses() {
       setError(null);
     } catch (err) {
       setError(
-        "Failed to load courses. Backend may be need time to start, try again in 30 seconds.",
+        "Failed to load courses. Backend may need time to start, try again in 30 seconds.",
       );
       console.error(err);
     } finally {
@@ -62,17 +74,39 @@ function Courses() {
         setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
       } else if (status === 403 && backendMessage?.includes("allowlist")) {
         alert(
-          "This course is restricted to an allowlist of users, and your account is not on that list. Please contact the course creator if you believe this is a mistake.",
+          "This course is restricted to an allowlist of users, and your account is not on that list.",
         );
       } else if (backendMessage) {
         alert(backendMessage);
       } else {
         alert("Failed to enroll in course. Please try again.");
       }
-
       console.error(err);
     } finally {
       setEnrolling({ ...enrolling, [courseId]: false });
+    }
+  };
+
+  const handleBuyNow = async (courseId) => {
+    setCheckingOut((prev) => ({ ...prev, [courseId]: true }));
+    try {
+      const result = await paymentsApi.createCheckoutSession(courseId);
+      sessionStorage.setItem("stripeCheckout", JSON.stringify({ courseId }));
+      window.location.href = result.checkoutUrl;
+    } catch (err) {
+      const code = err.response?.data?.code;
+      const msg = err.response?.data?.error;
+      if (code === "ALREADY_ENROLLED") {
+        setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
+        alert("You are already enrolled in this course.");
+      } else if (msg) {
+        alert(msg);
+      } else {
+        alert("Failed to start checkout. Please try again.");
+      }
+      console.error(err);
+    } finally {
+      setCheckingOut((prev) => ({ ...prev, [courseId]: false }));
     }
   };
 
@@ -118,53 +152,80 @@ function Courses() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
-            <div
-              key={course.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
-            >
-              <div className="p-6">
-                <Link to={`/courses/${course.id}`} className="block">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-indigo-600">
-                    {course.title}
-                  </h3>
-                </Link>
-                <p className="text-gray-600 mb-4 line-clamp-3">
-                  {course.description || "No description"}
-                </p>
-                {course.author && (
-                  <div className="flex items-center text-sm text-gray-500">
-                    <span className="font-medium">Author:</span>
-                    <span className="ml-2">
-                      {course.author.name || course.author.email}
+          {courses.map((course) => {
+            const isEnrolled = enrolledCourseIds.has(course.id);
+            const isPaid = course.isPaid;
+            const priceLabel = isPaid
+              ? formatPrice(course.priceCents, course.currency)
+              : "Free";
+
+            return (
+              <div
+                key={course.id}
+                className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+              >
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-2">
+                    <Link to={`/courses/${course.id}`} className="block flex-1">
+                      <h3 className="text-xl font-semibold text-gray-900 hover:text-indigo-600">
+                        {course.title}
+                      </h3>
+                    </Link>
+                    <span
+                      className={`ml-3 flex-shrink-0 inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                        isPaid
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {priceLabel}
                     </span>
                   </div>
-                )}
-                <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                  <span className="text-sm text-indigo-600 font-medium">
-                    ID: {course.id}
-                  </span>
-                  {isAuthenticated &&
-                    (enrolledCourseIds.has(course.id) ? (
-                      <Link
-                        to="/profile"
-                        className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded"
-                      >
-                        Enrolled
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={() => handleEnroll(course.id)}
-                        disabled={enrolling[course.id]}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {enrolling[course.id] ? "Enrolling..." : "Enroll"}
-                      </button>
-                    ))}
+                  <p className="text-gray-600 mb-4 line-clamp-3">
+                    {course.description || "No description"}
+                  </p>
+                  {course.author && (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span className="font-medium">Author:</span>
+                      <span className="ml-2">
+                        {course.author.name || course.author.email}
+                      </span>
+                    </div>
+                  )}
+                  <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+                    <span className="text-sm text-indigo-600 font-medium">
+                      ID: {course.id}
+                    </span>
+                    {isAuthenticated &&
+                      (isEnrolled ? (
+                        <Link
+                          to="/profile"
+                          className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded"
+                        >
+                          Enrolled
+                        </Link>
+                      ) : isPaid ? (
+                        <button
+                          onClick={() => handleBuyNow(course.id)}
+                          disabled={checkingOut[course.id]}
+                          className="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {checkingOut[course.id] ? "Redirecting..." : `Buy — ${priceLabel}`}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleEnroll(course.id)}
+                          disabled={enrolling[course.id]}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {enrolling[course.id] ? "Enrolling..." : "Enroll"}
+                        </button>
+                      ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
