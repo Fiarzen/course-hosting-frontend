@@ -170,6 +170,14 @@ export const paymentsApi = {
     const response = await api.post(`/payments/courses/${courseId}/checkout-session`);
     return response.data; // { purchaseId, courseId, status, checkoutSessionId, checkoutUrl, expiresAt, reused }
   },
+  createPaypalOrder: async (courseId) => {
+    const response = await api.post(`/payments/courses/${courseId}/paypal-order`);
+    return response.data; // { purchaseId, courseId, status, paypalOrderId, approvalUrl, reused }
+  },
+  capturePaypalOrder: async (token) => {
+    const response = await api.post(`/payments/paypal/capture`, { token });
+    return response.data; // { purchaseId, courseId, status }
+  },
   getPaymentStatus: async (courseId) => {
     const response = await api.get(`/payments/courses/${courseId}/status`);
     return response.data; // { courseId, isPaid, priceCents, currency, isEnrolled, purchase, canEnrollDirectly }
