@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { enrollmentApi } from '../api/api';
+import { formatPrice } from '../utils/pricing';
 
 function Profile() {
   const { user, isAuthenticated } = useAuth();
@@ -151,15 +152,26 @@ function Profile() {
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <Link to={`/courses/${enrollment.course.id}`}>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2 hover:text-indigo-600">
-                          {enrollment.course.title}
-                        </h4>
-                      </Link>
+                      <div className="flex items-start gap-2 mb-2 flex-wrap">
+                        <Link to={`/courses/${enrollment.course.id}`}>
+                          <h4 className="text-lg font-semibold text-gray-900 hover:text-indigo-600">
+                            {enrollment.course.title}
+                          </h4>
+                        </Link>
+                        {enrollment.course.isPaid ? (
+                          <span className="flex-shrink-0 mt-1 inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                            {formatPrice(enrollment.course.priceCents, enrollment.course.currency) || 'Paid'}
+                          </span>
+                        ) : (
+                          <span className="flex-shrink-0 mt-1 inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Free
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                         {enrollment.course.description || 'No description'}
                       </p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                         <span>Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}</span>
                         <span>
                           Progress: {enrollment.completedLessons} / {enrollment.totalLessons} lessons

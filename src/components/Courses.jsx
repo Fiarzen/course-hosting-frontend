@@ -2,18 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { coursesApi, enrollmentApi, paymentsApi } from "../api/api";
-
-function formatPrice(priceCents, currency) {
-  if (!priceCents || !currency) return null;
-  try {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-    }).format(priceCents / 100);
-  } catch {
-    return `${currency.toUpperCase()} ${(priceCents / 100).toFixed(2)}`;
-  }
-}
+import { formatPrice } from "../utils/pricing";
 
 function Courses() {
   const { isAuthenticated, user } = useAuth();
@@ -23,6 +12,7 @@ function Courses() {
   const [error, setError] = useState(null);
   const [enrolling, setEnrolling] = useState({});
   const [checkingOut, setCheckingOut] = useState({});
+  const [payingWithPaypal, setPayingWithPaypal] = useState({});
 
   const canCreateCourse = user?.role === "CREATOR" || user?.role === "ADMIN";
 
@@ -84,6 +74,29 @@ function Courses() {
       console.error(err);
     } finally {
       setEnrolling({ ...enrolling, [courseId]: false });
+    }
+  };
+
+  const handlePayPal = async (courseId) => {
+    setPayingWithPaypal((prev) => ({ ...prev, [courseId]: true }));
+    try {
+      const result = await paymentsApi.createPaypalOrder(courseId);
+      sessionStorage.setItem('stripeCheckout', JSON.stringify({ courseId }));
+      window.location.href = result.approvalUrl;
+    } catch (err) {
+      const code = err.response?.data?.code;
+      const msg = err.response?.data?.error;
+      if (code === 'ALREADY_ENROLLED') {
+        setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
+        alert('You are already enrolled in this course.');
+      } else if (msg) {
+        alert(msg);
+      } else {
+        alert('Failed to start PayPal checkout. Please try again.');
+      }
+      console.error(err);
+    } finally {
+      setPayingWithPaypal((prev) => ({ ...prev, [courseId]: false }));
     }
   };
 
@@ -205,13 +218,22 @@ function Courses() {
                           Enrolled
                         </Link>
                       ) : isPaid ? (
-                        <button
-                          onClick={() => handleBuyNow(course.id)}
-                          disabled={checkingOut[course.id]}
-                          className="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {checkingOut[course.id] ? "Redirecting..." : `Buy — ${priceLabel}`}
-                        </button>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => handleBuyNow(course.id)}
+                            disabled={checkingOut[course.id] || payingWithPaypal[course.id]}
+                            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {checkingOut[course.id] ? "Redirecting…" : `Card — ${priceLabel}`}
+                          </button>
+                          <button
+                            onClick={() => handlePayPal(course.id)}
+                            disabled={checkingOut[course.id] || payingWithPaypal[course.id]}
+                            className="bg-[#0070ba] hover:bg-[#005ea6] text-white text-xs font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {payingWithPaypal[course.id] ? "Redirecting…" : "PayPal"}
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => handleEnroll(course.id)}

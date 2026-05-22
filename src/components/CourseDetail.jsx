@@ -2,18 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { coursesApi, lessonsApi, enrollmentApi, paymentsApi } from '../api/api';
-
-function formatPrice(priceCents, currency) {
-  if (!priceCents || !currency) return null;
-  try {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(priceCents / 100);
-  } catch {
-    return `${currency.toUpperCase()} ${(priceCents / 100).toFixed(2)}`;
-  }
-}
+import { formatPrice } from '../utils/pricing';
 
 function CourseDetail() {
   const { courseId } = useParams();
@@ -27,6 +16,7 @@ function CourseDetail() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [payingWithPaypal, setPayingWithPaypal] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null);
 
   useEffect(() => {
@@ -164,6 +154,30 @@ function CourseDetail() {
     }
   };
 
+  const handlePayPal = async () => {
+    setPayingWithPaypal(true);
+    try {
+      const result = await paymentsApi.createPaypalOrder(parseInt(courseId));
+      sessionStorage.setItem('stripeCheckout', JSON.stringify({ courseId: parseInt(courseId) }));
+      window.location.href = result.approvalUrl;
+    } catch (err) {
+      const code = err.response?.data?.code;
+      const msg = err.response?.data?.error;
+      if (code === 'ALREADY_ENROLLED') {
+        setIsEnrolled(true);
+        await loadProgress();
+        alert('You are already enrolled in this course.');
+      } else if (msg) {
+        alert(msg);
+      } else {
+        alert('Failed to start PayPal checkout. Please try again.');
+      }
+      console.error(err);
+    } finally {
+      setPayingWithPaypal(false);
+    }
+  };
+
   const handleCompleteLesson = async (lessonId) => {
     try {
       await enrollmentApi.completeLesson(lessonId);
@@ -255,13 +269,22 @@ function CourseDetail() {
           {isAuthenticated && !isEnrolled && (
             <div className="mt-4 flex flex-wrap gap-3 items-center">
               {isPaid && !canEnrollDirectly && (
-                <button
-                  onClick={handleBuyNow}
-                  disabled={checkingOut}
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-6 rounded disabled:opacity-50"
-                >
-                  {checkingOut ? 'Redirecting to payment...' : `Buy Now — ${priceLabel}`}
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={checkingOut || payingWithPaypal}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-5 rounded disabled:opacity-50"
+                  >
+                    {checkingOut ? 'Redirecting…' : `Pay by Card — ${priceLabel}`}
+                  </button>
+                  <button
+                    onClick={handlePayPal}
+                    disabled={checkingOut || payingWithPaypal}
+                    className="bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold py-2 px-5 rounded disabled:opacity-50"
+                  >
+                    {payingWithPaypal ? 'Redirecting…' : `Pay with PayPal — ${priceLabel}`}
+                  </button>
+                </div>
               )}
               {canEnrollDirectly && (
                 <button

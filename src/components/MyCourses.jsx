@@ -2,24 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { coursesApi, lessonsApi, paymentsApi } from '../api/api';
-
-const CURRENCY_OPTIONS = [
-  { value: 'gbp', label: 'GBP (£)' },
-  { value: 'usd', label: 'USD ($)' },
-  { value: 'eur', label: 'EUR (€)' },
-];
-
-function formatPrice(priceCents, currency) {
-  if (!priceCents || !currency) return null;
-  try {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(priceCents / 100);
-  } catch {
-    return `${currency.toUpperCase()} ${(priceCents / 100).toFixed(2)}`;
-  }
-}
+import { formatPrice, CURRENCY_OPTIONS } from '../utils/pricing';
 
 function MyCourses() {
   const navigate = useNavigate();
@@ -346,6 +329,98 @@ function MyCourses() {
                   </div>
                 </div>
 
+                {/* Access control + Pricing — always visible */}
+                <div className="mt-4 border-t border-gray-200 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="border border-gray-200 rounded p-3 bg-gray-50">
+                    <h5 className="text-sm font-semibold text-gray-800 mb-2">Access control</h5>
+                    <label className="inline-flex items-center mb-2">
+                      <input
+                        type="checkbox"
+                        checked={accessForm[course.id]?.restrictedToAllowList ?? course.restrictedToAllowList ?? false}
+                        onChange={(e) =>
+                          handleAccessChange(course.id, 'restrictedToAllowList', e.target.checked)
+                        }
+                        className="mr-2"
+                      />
+                      <span className="text-xs text-gray-700 font-medium">
+                        Restrict to allowlist of emails
+                      </span>
+                    </label>
+                    <textarea
+                      className="mt-1 w-full text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      rows={3}
+                      placeholder="user1@example.com, user2@example.com"
+                      value={
+                        accessForm[course.id]?.allowedEmailsText ??
+                        (course.allowedEmails && course.allowedEmails.length > 0
+                          ? course.allowedEmails.join(', ')
+                          : '')
+                      }
+                      onChange={(e) =>
+                        handleAccessChange(course.id, 'allowedEmailsText', e.target.value)
+                      }
+                    />
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        disabled={savingAccess[course.id]}
+                        onClick={() => handleSaveAccess(course.id)}
+                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingAccess[course.id] ? 'Saving...' : 'Save access'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const pf = getPricingForm(course);
+                    return (
+                      <div className="border border-gray-200 rounded p-3 bg-gray-50">
+                        <h5 className="text-sm font-semibold text-gray-800 mb-2">Pricing</h5>
+                        <label className="inline-flex items-center mb-2">
+                          <input
+                            type="checkbox"
+                            checked={pf.isPaid}
+                            onChange={(e) => handlePricingChange(course.id, 'isPaid', e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span className="text-xs text-gray-700 font-medium">Paid course</span>
+                        </label>
+                        {pf.isPaid && (
+                          <div className="flex gap-2 mt-1">
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={pf.priceInput}
+                              onChange={(e) => handlePricingChange(course.id, 'priceInput', e.target.value)}
+                              className="text-xs border rounded px-2 py-1 w-24 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              placeholder="9.99"
+                            />
+                            <select
+                              value={pf.currency}
+                              onChange={(e) => handlePricingChange(course.id, 'currency', e.target.value)}
+                              className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            >
+                              {CURRENCY_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            disabled={savingPricing[course.id]}
+                            onClick={() => handleSavePricing(course.id)}
+                            className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {savingPricing[course.id] ? 'Saving...' : 'Save pricing'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 {lessonsByCourse[course.id] && (
                   <div className="mt-4 border-t border-gray-200 pt-4">
                     <div className="flex justify-between items-center mb-3">
@@ -358,96 +433,6 @@ function MyCourses() {
                         {savingOrder[course.id] ? 'Saving...' : 'Save Order'}
                       </button>
                     </div>
-
-                    <div className="mb-4 border border-gray-200 rounded p-3 bg-gray-50">
-                      <h5 className="text-sm font-semibold text-gray-800 mb-2">Access control</h5>
-                      <label className="inline-flex items-center mb-2">
-                        <input
-                          type="checkbox"
-                          checked={accessForm[course.id]?.restrictedToAllowList ?? course.restrictedToAllowList ?? false}
-                          onChange={(e) =>
-                            handleAccessChange(course.id, 'restrictedToAllowList', e.target.checked)
-                          }
-                          className="mr-2"
-                        />
-                        <span className="text-xs text-gray-700 font-medium">
-                          Restrict access to an allowlist of emails
-                        </span>
-                      </label>
-                      <textarea
-                        className="mt-1 w-full text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        rows={3}
-                        placeholder="user1@example.com, user2@example.com"
-                        value={
-                          accessForm[course.id]?.allowedEmailsText ??
-                          (course.allowedEmails && course.allowedEmails.length > 0
-                            ? course.allowedEmails.join(', ')
-                            : '')
-                        }
-                        onChange={(e) =>
-                          handleAccessChange(course.id, 'allowedEmailsText', e.target.value)
-                        }
-                      />
-                      <div className="mt-2 flex justify-end">
-                        <button
-                          disabled={savingAccess[course.id]}
-                          onClick={() => handleSaveAccess(course.id)}
-                          className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {savingAccess[course.id] ? 'Saving...' : 'Save access settings'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Pricing management */}
-                    {(() => {
-                      const pf = getPricingForm(course);
-                      return (
-                        <div className="mb-4 border border-gray-200 rounded p-3 bg-gray-50">
-                          <h5 className="text-sm font-semibold text-gray-800 mb-2">Pricing</h5>
-                          <label className="inline-flex items-center mb-2">
-                            <input
-                              type="checkbox"
-                              checked={pf.isPaid}
-                              onChange={(e) => handlePricingChange(course.id, 'isPaid', e.target.checked)}
-                              className="mr-2"
-                            />
-                            <span className="text-xs text-gray-700 font-medium">Paid course</span>
-                          </label>
-                          {pf.isPaid && (
-                            <div className="flex gap-2 mt-1">
-                              <input
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                value={pf.priceInput}
-                                onChange={(e) => handlePricingChange(course.id, 'priceInput', e.target.value)}
-                                className="text-xs border rounded px-2 py-1 w-24 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                placeholder="9.99"
-                              />
-                              <select
-                                value={pf.currency}
-                                onChange={(e) => handlePricingChange(course.id, 'currency', e.target.value)}
-                                className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                              >
-                                {CURRENCY_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <div className="mt-2 flex justify-end">
-                            <button
-                              disabled={savingPricing[course.id]}
-                              onClick={() => handleSavePricing(course.id)}
-                              className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {savingPricing[course.id] ? 'Saving...' : 'Save pricing'}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })()}
 
                     {lessonsByCourse[course.id].length === 0 ? (
                       <p className="text-gray-500 text-sm">No lessons yet.</p>

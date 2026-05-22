@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { coursesApi } from '../api/api';
-
-const CURRENCY_OPTIONS = [
-  { value: 'gbp', label: 'GBP (£)' },
-  { value: 'usd', label: 'USD ($)' },
-  { value: 'eur', label: 'EUR (€)' },
-];
+import { CURRENCY_OPTIONS } from '../utils/pricing';
 
 function CreateCourse() {
   const navigate = useNavigate();
