@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { coursesApi, lessonsApi, enrollmentApi, paymentsApi } from '../api/api';
 import { formatPrice } from '../utils/pricing';
+import { playCompletionSound } from '../utils/sound';
 
 function CourseDetail() {
   const { courseId } = useParams();
@@ -182,6 +183,7 @@ function CourseDetail() {
     try {
       await enrollmentApi.completeLesson(lessonId);
       setLessonProgress(prev => ({ ...prev, [lessonId]: true }));
+      playCompletionSound();
       await loadProgress();
     } catch (err) {
       const status = err.response?.status;
@@ -226,6 +228,9 @@ function CourseDetail() {
       </div>
     );
   }
+
+  const completedLessonsCount = Object.values(lessonProgress).filter(Boolean).length;
+  const totalLessons = lessons.length;
 
   const isPaid = course?.isPaid;
   const priceLabel = isPaid ? formatPrice(course?.priceCents, course?.currency) : null;
@@ -319,6 +324,20 @@ function CourseDetail() {
 
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Lessons</h2>
+          {isEnrolled && lessons.length > 0 && (
+            <div className="mb-6">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>{completedLessonsCount} / {totalLessons} lessons completed</span>
+                <span>{Math.round((completedLessonsCount / totalLessons) * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
+                  style={{ width: `${(completedLessonsCount / totalLessons) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
           {lessons.length === 0 ? (
             !isAuthenticated ? (
               <p className="text-gray-500">

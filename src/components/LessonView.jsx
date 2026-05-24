@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { lessonsApi, enrollmentApi } from '../api/api';
+import { playCompletionSound } from '../utils/sound';
 import './LessonView.css';
 
 function LessonView() {
@@ -17,6 +18,7 @@ function LessonView() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [courseCompletedCount, setCourseCompletedCount] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -39,6 +41,7 @@ function LessonView() {
           setIsEnrolled(true);
           const lp = progress.lessons.find((p) => p.lesson.id === parseInt(lessonId));
           setIsCompleted(lp?.completed || false);
+          setCourseCompletedCount(progress.lessons.filter((p) => p.completed).length);
         } catch (progressErr) {
           if (progressErr.response?.status === 403) {
             // Not enrolled in course
@@ -164,6 +167,8 @@ function LessonView() {
     try {
       await enrollmentApi.completeLesson(parseInt(lessonId));
       setIsCompleted(true);
+      setCourseCompletedCount((prev) => prev + 1);
+      playCompletionSound();
     } catch (err) {
       const status = err.response?.status;
       const backendMessage = err.response?.data?.error;
@@ -188,6 +193,21 @@ function LessonView() {
         >
           ← Back to Course
         </button>
+
+        {isEnrolled && total > 0 && (
+          <div className="mb-4">
+            <div className="flex justify-between text-sm text-gray-600 mb-1">
+              <span>{courseCompletedCount} / {total} lessons completed</span>
+              <span>{Math.round((courseCompletedCount / total) * 100)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
+                style={{ width: `${(courseCompletedCount / total) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="lesson-view__header mb-4 flex items-center justify-between">
           <div>
