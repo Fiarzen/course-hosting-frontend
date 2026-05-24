@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { lessonsApi, coursesApi, enrollmentApi } from '../api/api';
+import { playCompletionSound } from '../utils/sound';
 
 function Lessons() {
   const { user, isAuthenticated } = useAuth();
@@ -96,6 +97,7 @@ function Lessons() {
     try {
       await enrollmentApi.completeLesson(lessonId);
       setLessonProgress(prev => ({ ...prev, [lessonId]: true }));
+      playCompletionSound();
       await loadProgress(); // Reload to get updated stats
     } catch (err) {
       alert('Failed to mark lesson as complete. Make sure you are enrolled in the course.');
@@ -153,6 +155,24 @@ function Lessons() {
         </select>
       </div>
 
+      {isAuthenticated && selectedCourseId && lessons.length > 0 && (
+        <div className="mb-6">
+          <div className="flex justify-between text-sm text-gray-600 mb-1">
+            <span>
+              {Object.values(lessonProgress).filter(Boolean).length} / {lessons.length} lessons completed
+            </span>
+            <span>
+              {Math.round((Object.values(lessonProgress).filter(Boolean).length / lessons.length) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
+              style={{ width: `${(Object.values(lessonProgress).filter(Boolean).length / lessons.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
       {lessons.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">No lessons found. Create your first lesson!</p>
