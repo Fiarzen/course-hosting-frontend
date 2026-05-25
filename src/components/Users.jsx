@@ -9,6 +9,7 @@ function Users() {
   const [error, setError] = useState(null);
   const [upgrading, setUpgrading] = useState({});
   const [resetting, setResetting] = useState({});
+  const [deleting, setDeleting] = useState({});
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -96,6 +97,23 @@ function Users() {
       console.error(err);
     } finally {
       setResetting({ ...resetting, [userId]: false });
+    }
+  };
+
+  const handleDeleteUser = async (userId, userEmail) => {
+    if (!window.confirm(
+      `Permanently delete the account for "${userEmail}"? This will also delete all their courses and data. This cannot be undone.`
+    )) return;
+
+    setDeleting((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await usersApi.deleteUser(userId);
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete user. Please try again.');
+      console.error(err);
+    } finally {
+      setDeleting((prev) => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -189,6 +207,15 @@ function Users() {
                       >
                         {resetting[userItem.id] ? 'Generating link...' : 'Reset Password'}
                       </button>
+                      {userItem.role !== 'ADMIN' && userItem.id !== user?.id && (
+                        <button
+                          onClick={() => handleDeleteUser(userItem.id, userItem.email)}
+                          disabled={deleting[userItem.id]}
+                          className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleting[userItem.id] ? 'Deleting...' : 'Delete'}
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>
