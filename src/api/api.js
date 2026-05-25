@@ -139,6 +139,21 @@ export const authApi = {
     const response = await api.post('/auth/reset-password', { token, newPassword });
     return response.data; // { message }
   },
+  // Request a password reset email (user-initiated)
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data; // { message }
+  },
+  // Verify email address with the token from the verification email
+  verifyEmail: async (token) => {
+    const response = await api.post('/auth/verify-email', { token });
+    return response.data; // { message }
+  },
+  // Resend the email verification link (requires auth)
+  resendVerification: async () => {
+    const response = await api.post('/auth/resend-verification');
+    return response.data; // { message }
+  },
 };
 
 // Enrollment API

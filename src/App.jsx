@@ -15,6 +15,8 @@ import LessonView from './components/LessonView';
 import EditLesson from './components/EditLesson';
 import MyCourses from './components/MyCourses';
 import ResetPassword from './components/ResetPassword';
+import ForgotPassword from './components/ForgotPassword';
+import VerifyEmail from './components/VerifyEmail';
 import PaymentSuccess from './components/PaymentSuccess';
 import PaymentCancel from './components/PaymentCancel';
 
@@ -217,6 +219,8 @@ function App() {
             <Route path="/lessons/create" element={<CreateLesson />} />
             <Route path="/my-courses" element={<MyCourses />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/cancel" element={<PaymentCancel />} />
           </Routes>

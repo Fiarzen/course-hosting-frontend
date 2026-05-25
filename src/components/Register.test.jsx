@@ -84,7 +84,7 @@ describe('Register', () => {
       email: 'alice@test.com',
       password: 'secret',
     }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Account created successfully');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Account created!');
   });
 
   it('omits name from payload when name field is left blank', async () => {

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { enrollmentApi } from '../api/api';
+import { enrollmentApi, authApi } from '../api/api';
 import { formatPrice } from '../utils/pricing';
 
 function Profile() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +14,8 @@ function Profile() {
   const [courseProgress, setCourseProgress] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [unenrolling, setUnenrolling] = useState({});
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -22,6 +24,20 @@ function Profile() {
     }
     loadEnrolledCourses();
   }, [isAuthenticated, navigate]);
+
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    setVerificationMessage(null);
+    try {
+      await authApi.resendVerification();
+      setVerificationMessage({ type: 'success', text: 'Verification email sent. Check your inbox.' });
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to send verification email.';
+      setVerificationMessage({ type: 'error', text: msg });
+    } finally {
+      setResendingVerification(false);
+    }
+  };
 
   const loadEnrolledCourses = async () => {
     try {
@@ -113,13 +129,41 @@ function Profile() {
               <span className={`px-2 py-1 text-xs rounded-full ${
                 user?.role === 'ADMIN'
                   ? 'bg-purple-100 text-purple-800'
-                  : user?.role === 'CREATOR' 
-                  ? 'bg-blue-100 text-blue-800' 
+                  : user?.role === 'CREATOR'
+                  ? 'bg-blue-100 text-blue-800'
                   : 'bg-indigo-100 text-indigo-800'
               }`}>
                 {user?.role || 'STUDENT'}
               </span>
             </p>
+            {user?.emailVerified === true && (
+              <p className="flex items-center gap-2 text-sm text-green-700">
+                <span>Email verified</span>
+                <span className="text-green-500">✓</span>
+              </p>
+            )}
+            {user?.emailVerified === false && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800 font-medium">Email not verified</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Check your inbox for a verification link, or request a new one.
+                </p>
+                {verificationMessage && (
+                  <p className={`text-xs mt-2 font-medium ${
+                    verificationMessage.type === 'success' ? 'text-green-700' : 'text-red-700'
+                  }`}>
+                    {verificationMessage.text}
+                  </p>
+                )}
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resendingVerification}
+                  className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resendingVerification ? 'Sending...' : 'Resend verification email'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
