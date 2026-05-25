@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/api';
 
 function useQuery() {
@@ -9,6 +9,7 @@ function useQuery() {
 
 function ResetPassword() {
   const query = useQuery();
+  const navigate = useNavigate();
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -44,9 +45,10 @@ function ResetPassword() {
     setLoading(true);
     try {
       await authApi.resetPasswordWithToken(token, password);
-      setSuccessMessage('Your password has been reset successfully. You can now log in with your new password.');
+      setSuccessMessage('Your password has been reset successfully. Redirecting to login...');
       setPassword('');
       setConfirmPassword('');
+      setTimeout(() => navigate('/login'), 3000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to reset password. The link may be invalid or expired.');
       console.error(err);

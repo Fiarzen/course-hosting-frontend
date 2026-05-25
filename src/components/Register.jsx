@@ -119,8 +119,10 @@ function Register() {
               className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4"
               role="alert"
             >
-              <strong className="font-bold">Success! </strong>
-              <span>Account created successfully. Redirecting...</span>
+              <strong className="font-bold">Account created! </strong>
+              <span>
+                Check your inbox for a verification email. Redirecting to home...
+              </span>
             </div>
           )}
 

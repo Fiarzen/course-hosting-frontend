@@ -80,9 +80,14 @@ function Login() {
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700 text-sm font-bold mb-2">
-              Password *
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="password" className="block text-gray-700 text-sm font-bold">
+                Password *
+              </label>
+              <Link to="/forgot-password" className="text-xs text-emerald-700 hover:text-emerald-900">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               id="password"
