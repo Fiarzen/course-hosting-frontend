@@ -126,6 +126,9 @@ export const usersApi = {
     const response = await api.post(`/users/${userId}/reset-password`);
     return response.data; // { message, resetToken, resetPath }
   },
+  deleteUser: async (userId) => {
+    await api.delete(`/users/${userId}`);
+  },
 };
 
 // Auth API (token-based)
