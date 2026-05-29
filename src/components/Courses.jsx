@@ -225,10 +225,10 @@ function Courses() {
           <div>
             <Kicker className="mb-4">catalogue · spring 2026</Kicker>
             <h1 className="font-serif text-[clamp(40px,5vw,64px)] leading-tight text-ink tracking-tight2 max-w-[720px]">
-              {courses.length} {courses.length === 1 ? "course" : "courses"}, attended to slowly.
+              Our available courses.
             </h1>
             <p className="mt-4 text-[16px] text-ink-soft leading-relaxed max-w-[520px]">
-              A small catalogue, deliberately. Each course is a single subject taught by one teacher.
+              From approved creators.
             </p>
           </div>
           {canCreateCourse && (
