@@ -7,7 +7,7 @@ function Home() {
   return (
     <div className="ml-screen-fade">
       <section className="relative py-24 sm:py-32 max-w-page mx-auto">
-        <Kicker className="mb-7">mindleaf · est. 2024</Kicker>
+        <Kicker className="mb-7">mindleaf · est. 2025</Kicker>
         <h1
           className="font-serif font-medium text-ink leading-[1.02] tracking-tight2 max-w-[900px]"
           style={{ fontSize: 'clamp(48px, 7vw, 96px)' }}

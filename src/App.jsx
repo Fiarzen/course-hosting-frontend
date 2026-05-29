@@ -192,7 +192,7 @@ function App() {
             <div className="flex items-center gap-3">
               <BrandLeaf size={13} />
               <span className="font-serif text-base text-ink">mindleaf</span>
-              <span className="ml-3 font-mono text-[11px] tracking-widest text-ink-faint">est. 2024</span>
+              <span className="ml-3 font-mono text-[11px] tracking-widest text-ink-faint">est. 2025</span>
             </div>
             <div className="flex gap-7 text-sm text-ink-soft">
               <Link to="/courses">catalogue</Link>
