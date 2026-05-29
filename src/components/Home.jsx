@@ -1,47 +1,111 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Leaf, Kicker, SectionHeading } from './Leaf';
 
 function Home() {
   const { isAuthenticated } = useAuth();
   return (
-    <div className="px-4 py-10 sm:px-0">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-          Welcome to MindLeaf
+    <div className="ml-screen-fade">
+      <section className="relative py-24 sm:py-32 max-w-page mx-auto">
+        <Kicker className="mb-7">mindleaf · est. 2024</Kicker>
+        <h1
+          className="font-serif font-medium text-ink leading-[1.02] tracking-tight2 max-w-[900px]"
+          style={{ fontSize: 'clamp(48px, 7vw, 96px)' }}
+        >
+          A quieter place<br />to learn one thing<br />at a time.
         </h1>
-        <p className="tnpmext-lg text-gray-700 mb-6">
-          Browse courses, follow lessons and track your progress.
+        <p className="mt-9 max-w-[520px] text-[17px] leading-relaxed text-ink-soft">
+          Short, slow courses for people who would rather attend to one thing properly than skim ten.
+          Made by teachers, writers, and craftspeople in a hurry to be unhurried.
         </p>
-        <div className="flex flex-col sm:flex-row sm:space-x-3 sm:space-y-0 space-y-3">
-          <Link
-            to="/courses"
-            className="inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-md shadow-sm transition"
-          >
-            Browse courses
+        <div className="mt-11 flex items-center gap-6 flex-wrap">
+          <Link to="/courses" className="ml-button-primary">
+            browse the catalogue
+            <Leaf size={14} strokeWidth={0} tilt={-20} color="var(--moss-soft)" />
           </Link>
           {!isAuthenticated && (
             <Link
               to="/register"
-              className="inline-flex items-center justify-center border border-emerald-200 text-emerald-800 hover:bg-emerald-50 font-medium px-6 py-3 rounded-md transition"
+              className="py-4 text-sm text-ink-soft"
+              style={{ borderBottom: '1px solid var(--hair-strong)' }}
             >
-              Create a learning account
+              create an account ↓
             </Link>
           )}
         </div>
-        <div className="mt-8 text-sm text-gray-500 leading-relaxed">
-          <p className="mb-2">
-            Teachers can create courses, upload lessons, and share private links
-            with their students.
-          </p>
-          <p>
-            Learners can enroll in courses, watch lessons, and mark them
-            complete at their own pace.
-          </p>
+
+        {/* Quiet anchor leaf */}
+        <div aria-hidden="true" className="pointer-events-none absolute right-10 top-20 opacity-10 hidden sm:block" style={{ color: 'var(--moss)' }}>
+          <Leaf size={360} strokeWidth={0} tilt={-8} />
         </div>
-      </div>
+      </section>
+
+      {/* Three principles */}
+      <section
+        className="px-0 py-16 sm:py-20"
+        style={{
+          borderTop: '1px solid var(--hair)',
+          borderBottom: '1px solid var(--hair)',
+          background: 'color-mix(in oklab, var(--paper-2) 60%, transparent)',
+        }}
+      >
+        <div className="grid grid-cols-1 gap-14 md:grid-cols-3 max-w-page mx-auto">
+          {[
+            ['i.',   'Slow on purpose',     'Lessons are paced for the depth they ask for, not the speed you would prefer.'],
+            ['ii.',  'One thing at a time', 'Each course is a single, finishable subject. No bundles, no upsells.'],
+            ['iii.', 'Quiet by design',     'No streaks, no notifications, no leaderboards. You return because you want to.'],
+          ].map(([num, title, body]) => (
+            <div key={num}>
+              <div className="font-serif text-2xl text-moss mb-4">{num}</div>
+              <h3 className="font-serif text-[22px] text-ink mb-3 leading-tight">{title}</h3>
+              <p className="text-[14.5px] text-ink-soft leading-relaxed">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="py-24 max-w-page mx-auto">
+        <SectionHeading kicker="featured this season">A course we recommend</SectionHeading>
+        <Link
+          to="/courses"
+          className="ml-card grid overflow-hidden md:grid-cols-2 cursor-pointer"
+        >
+          <div
+            className="relative min-h-[360px] grid place-items-center"
+            style={{
+              background:
+                'repeating-linear-gradient(135deg, var(--moss-wash) 0 2px, transparent 2px 14px), var(--paper)',
+              borderRight: '1px solid var(--hair)',
+            }}
+          >
+            <div className="opacity-50" style={{ color: 'var(--moss)' }}>
+              <Leaf size={140} strokeWidth={0} tilt={-12} />
+            </div>
+            <div className="ml-kicker absolute bottom-4 left-5 text-ink-faint normal-case tracking-widest">
+              [ cover · author portrait ]
+            </div>
+          </div>
+          <div className="flex flex-col justify-between p-10 sm:p-12">
+            <div>
+              <Kicker className="mb-5 text-ink-faint normal-case">spring · 8 lessons · 6 min each</Kicker>
+              <h3 className="font-serif text-[40px] leading-tight text-ink mb-4">The art of slow reading</h3>
+              <p className="text-[16px] text-ink-soft leading-relaxed max-w-[420px]">
+                A six-week practice in attention. Inhabit a page longer than is comfortable,
+                and notice what you would otherwise have missed.
+              </p>
+            </div>
+            <div className="mt-9 pt-6 flex items-center justify-between" style={{ borderTop: '1px solid var(--hair)' }}>
+              <div>
+                <div className="text-[13px] text-ink">Ren Asano</div>
+                <div className="text-[12px] text-ink-faint">Essayist, Kyoto</div>
+              </div>
+              <span className="font-serif text-[22px] text-ink">free</span>
+            </div>
+          </div>
+        </Link>
+      </section>
     </div>
   );
 }
 
 export default Home;
-

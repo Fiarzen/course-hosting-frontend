@@ -3,6 +3,80 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { coursesApi, enrollmentApi, paymentsApi } from "../api/api";
 import { formatPrice } from "../utils/pricing";
+import { Leaf, Kicker, LeafLoader } from "./Leaf";
+
+function CourseCard({ course, isEnrolled, isAuthenticated, onEnroll, onBuyCard, onBuyPaypal, enrolling, checkingOut, payingWithPaypal }) {
+  const isPaid = course.isPaid;
+  const priceLabel = isPaid ? formatPrice(course.priceCents, course.currency) : "Free";
+
+  return (
+    <article className="ml-card relative p-8 flex flex-col justify-between min-h-[280px]">
+      <span className="absolute top-5 right-5" style={{ color: "var(--moss)", opacity: 0.85 }}>
+        <Leaf size={20} tilt={isPaid ? 28 : -22} strokeWidth={0} />
+      </span>
+
+      <header>
+        <Kicker className="mb-3.5 text-ink-faint normal-case tracking-widest">
+          {course.lessons?.length || course.lessonCount || "—"} lessons
+        </Kicker>
+        <Link to={`/courses/${course.id}`} className="block">
+          <h3 className="font-serif text-[26px] leading-tight text-ink mb-2.5 max-w-[85%]">
+            {course.title}
+          </h3>
+        </Link>
+        <p className="text-[14.5px] text-ink-soft leading-relaxed max-w-[95%]">
+          {course.description || "No description"}
+        </p>
+      </header>
+
+      <footer className="mt-7 pt-4 flex items-center justify-between gap-3" style={{ borderTop: "1px solid var(--hair)" }}>
+        <div className="flex flex-col gap-0.5">
+          {course.author && (
+            <>
+              <span className="text-[13px] text-ink">{course.author.name || course.author.email}</span>
+              <span className="text-[11.5px] text-ink-faint">author</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-3.5">
+          {isAuthenticated && (
+            isEnrolled ? (
+              <Link to="/profile" className="text-[12px] text-moss-deep flex items-center gap-1.5">
+                <Leaf size={11} strokeWidth={0} /> tending
+              </Link>
+            ) : isPaid ? (
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={(e) => { e.preventDefault(); onBuyCard(course.id); }}
+                  disabled={checkingOut[course.id] || payingWithPaypal[course.id]}
+                  className="ml-button-primary text-[11px] py-1.5 px-3"
+                >
+                  {checkingOut[course.id] ? "redirecting…" : `card · ${priceLabel}`}
+                </button>
+                <button
+                  onClick={(e) => { e.preventDefault(); onBuyPaypal(course.id); }}
+                  disabled={checkingOut[course.id] || payingWithPaypal[course.id]}
+                  className="ml-button-ghost text-[11px] py-1.5 px-3"
+                >
+                  {payingWithPaypal[course.id] ? "redirecting…" : "PayPal"}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => { e.preventDefault(); onEnroll(course.id); }}
+                disabled={enrolling[course.id]}
+                className="ml-button-primary text-[12px] py-1.5 px-3"
+              >
+                {enrolling[course.id] ? "enrolling…" : "enroll"}
+              </button>
+            )
+          )}
+          <span className="font-serif text-[18px] text-ink">{priceLabel.toLowerCase()}</span>
+        </div>
+      </footer>
+    </article>
+  );
+}
 
 function Courses() {
   const { isAuthenticated, user } = useAuth();
@@ -13,14 +87,13 @@ function Courses() {
   const [enrolling, setEnrolling] = useState({});
   const [checkingOut, setCheckingOut] = useState({});
   const [payingWithPaypal, setPayingWithPaypal] = useState({});
+  const [filter, setFilter] = useState("all");
 
   const canCreateCourse = user?.role === "CREATOR" || user?.role === "ADMIN";
 
   useEffect(() => {
     loadCourses();
-    if (isAuthenticated) {
-      loadEnrolledCourses();
-    }
+    if (isAuthenticated) loadEnrolledCourses();
   }, [isAuthenticated]);
 
   const loadCourses = async () => {
@@ -30,9 +103,7 @@ function Courses() {
       setCourses(data);
       setError(null);
     } catch (err) {
-      setError(
-        "Failed to load courses. Backend may need time to start, try again in 30 seconds.",
-      );
+      setError("Failed to load courses. The backend may need a moment to wake — try again in 30 seconds.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -42,15 +113,14 @@ function Courses() {
   const loadEnrolledCourses = async () => {
     try {
       const data = await enrollmentApi.getMyCourses();
-      const enrolledIds = new Set(data.map((e) => e.course.id));
-      setEnrolledCourseIds(enrolledIds);
+      setEnrolledCourseIds(new Set(data.map((e) => e.course.id)));
     } catch (err) {
       console.error("Failed to load enrolled courses:", err);
     }
   };
 
   const handleEnroll = async (courseId) => {
-    setEnrolling({ ...enrolling, [courseId]: true });
+    setEnrolling((prev) => ({ ...prev, [courseId]: true }));
     try {
       await enrollmentApi.enrollInCourse(courseId);
       setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
@@ -58,14 +128,11 @@ function Courses() {
     } catch (err) {
       const status = err.response?.status;
       const backendMessage = err.response?.data?.error;
-
       if (status === 409) {
         alert("You are already enrolled in this course.");
         setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
       } else if (status === 403 && backendMessage?.includes("allowlist")) {
-        alert(
-          "This course is restricted to an allowlist of users, and your account is not on that list.",
-        );
+        alert("This course is restricted to an allowlist of users, and your account is not on that list.");
       } else if (backendMessage) {
         alert(backendMessage);
       } else {
@@ -73,7 +140,7 @@ function Courses() {
       }
       console.error(err);
     } finally {
-      setEnrolling({ ...enrolling, [courseId]: false });
+      setEnrolling((prev) => ({ ...prev, [courseId]: false }));
     }
   };
 
@@ -81,18 +148,18 @@ function Courses() {
     setPayingWithPaypal((prev) => ({ ...prev, [courseId]: true }));
     try {
       const result = await paymentsApi.createPaypalOrder(courseId);
-      sessionStorage.setItem('stripeCheckout', JSON.stringify({ courseId }));
+      sessionStorage.setItem("stripeCheckout", JSON.stringify({ courseId }));
       window.location.href = result.approvalUrl;
     } catch (err) {
       const code = err.response?.data?.code;
       const msg = err.response?.data?.error;
-      if (code === 'ALREADY_ENROLLED') {
+      if (code === "ALREADY_ENROLLED") {
         setEnrolledCourseIds(new Set([...enrolledCourseIds, courseId]));
-        alert('You are already enrolled in this course.');
+        alert("You are already enrolled in this course.");
       } else if (msg) {
         alert(msg);
       } else {
-        alert('Failed to start PayPal checkout. Please try again.');
+        alert("Failed to start PayPal checkout. Please try again.");
       }
       console.error(err);
     } finally {
@@ -124,130 +191,99 @@ function Courses() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LeafLoader label="loading courses" />;
   }
 
   if (error) {
     return (
       <div
-        className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative"
+        className="ml-card p-6 my-12 max-w-page mx-auto"
         role="alert"
+        style={{ background: "color-mix(in oklab, var(--moss-wash) 30%, transparent)", borderColor: "var(--moss-soft)" }}
       >
-        <strong className="font-bold">Error: </strong>
-        <span className="block sm:inline">{error}</span>
+        <strong className="font-serif text-ink">A small pause. </strong>
+        <p className="mt-2 text-sm text-ink-soft">{error}</p>
       </div>
     );
   }
 
+  const filters = [
+    { key: "all", label: "all courses", count: courses.length },
+    { key: "free", label: "free", count: courses.filter((c) => !c.isPaid).length },
+    { key: "paid", label: "studio", count: courses.filter((c) => c.isPaid).length },
+  ];
+  const filtered = courses.filter((c) => {
+    if (filter === "free") return !c.isPaid;
+    if (filter === "paid") return c.isPaid;
+    return true;
+  });
+
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-gray-900">Courses</h2>
-        {canCreateCourse && (
-          <Link
-            to="/courses/create"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 ease-in-out"
-          >
-            + Create Course
-          </Link>
-        )}
-      </div>
-
-      {courses.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">
-            No courses found. Create your first course!
-          </p>
+    <div className="ml-screen-fade">
+      <section className="py-16">
+        <div className="flex items-end justify-between gap-6 flex-wrap mb-2">
+          <div>
+            <Kicker className="mb-4">catalogue · spring 2026</Kicker>
+            <h1 className="font-serif text-[clamp(40px,5vw,64px)] leading-tight text-ink tracking-tight2 max-w-[720px]">
+              {courses.length} {courses.length === 1 ? "course" : "courses"}, attended to slowly.
+            </h1>
+            <p className="mt-4 text-[16px] text-ink-soft leading-relaxed max-w-[520px]">
+              A small catalogue, deliberately. Each course is a single subject taught by one teacher.
+            </p>
+          </div>
+          {canCreateCourse && (
+            <Link to="/courses/create" className="ml-button-primary">
+              new course
+              <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
+            </Link>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => {
-            const isEnrolled = enrolledCourseIds.has(course.id);
-            const isPaid = course.isPaid;
-            const priceLabel = isPaid
-              ? formatPrice(course.priceCents, course.currency)
-              : "Free";
+      </section>
 
+      <section className="py-2" style={{ borderTop: "1px solid var(--hair)", borderBottom: "1px solid var(--hair)" }}>
+        <div className="flex items-baseline gap-6 py-3 flex-wrap">
+          {filters.map((f, i) => {
+            const active = filter === f.key;
             return (
-              <div
-                key={course.id}
-                className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className="flex items-baseline gap-2 py-2 pr-6 text-[14px]"
+                style={{
+                  color: active ? "var(--ink)" : "var(--ink-soft)",
+                  borderRight: i < filters.length - 1 ? "1px solid var(--hair)" : "none",
+                }}
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-2">
-                    <Link to={`/courses/${course.id}`} className="block flex-1">
-                      <h3 className="text-xl font-semibold text-gray-900 hover:text-indigo-600">
-                        {course.title}
-                      </h3>
-                    </Link>
-                    <span
-                      className={`ml-3 flex-shrink-0 inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                        isPaid
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {priceLabel}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mb-4 line-clamp-3">
-                    {course.description || "No description"}
-                  </p>
-                  {course.author && (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="font-medium">Author:</span>
-                      <span className="ml-2">
-                        {course.author.name || course.author.email}
-                      </span>
-                    </div>
-                  )}
-                  <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <span className="text-sm text-indigo-600 font-medium">
-                      ID: {course.id}
-                    </span>
-                    {isAuthenticated &&
-                      (isEnrolled ? (
-                        <Link
-                          to="/profile"
-                          className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded"
-                        >
-                          Enrolled
-                        </Link>
-                      ) : isPaid ? (
-                        <div className="flex flex-col gap-1">
-                          <button
-                            onClick={() => handleBuyNow(course.id)}
-                            disabled={checkingOut[course.id] || payingWithPaypal[course.id]}
-                            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {checkingOut[course.id] ? "Redirecting…" : `Card — ${priceLabel}`}
-                          </button>
-                          <button
-                            onClick={() => handlePayPal(course.id)}
-                            disabled={checkingOut[course.id] || payingWithPaypal[course.id]}
-                            className="bg-[#0070ba] hover:bg-[#005ea6] text-white text-xs font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {payingWithPaypal[course.id] ? "Redirecting…" : "PayPal"}
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleEnroll(course.id)}
-                          disabled={enrolling[course.id]}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {enrolling[course.id] ? "Enrolling..." : "Enroll"}
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              </div>
+                {active && <Leaf size={10} strokeWidth={0} tilt={-20} />}
+                <span>{f.label}</span>
+                <span className="font-mono text-[11px] text-ink-faint">{String(f.count).padStart(2, "0")}</span>
+              </button>
             );
           })}
+        </div>
+      </section>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-20 text-ink-faint">
+          <Leaf size={40} strokeWidth={1} />
+          <p className="mt-4 text-sm">No courses found. Try another filter, or check back soon.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3 py-12">
+          {filtered.map((course) => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              isEnrolled={enrolledCourseIds.has(course.id)}
+              isAuthenticated={isAuthenticated}
+              onEnroll={handleEnroll}
+              onBuyCard={handleBuyNow}
+              onBuyPaypal={handlePayPal}
+              enrolling={enrolling}
+              checkingOut={checkingOut}
+              payingWithPaypal={payingWithPaypal}
+            />
+          ))}
         </div>
       )}
     </div>

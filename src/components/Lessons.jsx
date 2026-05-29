@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { lessonsApi, coursesApi, enrollmentApi } from '../api/api';
 import { playCompletionSound } from '../utils/sound';
+import { Leaf, Kicker, LeafRow, LeafLoader } from './Leaf';
 
 function Lessons() {
   const { user, isAuthenticated } = useAuth();
@@ -12,8 +13,7 @@ function Lessons() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lessonProgress, setLessonProgress] = useState({});
-  
-  // Check if user is CREATOR or ADMIN
+
   const canCreateLesson = user?.role === 'CREATOR' || user?.role === 'ADMIN';
 
   useEffect(() => {
@@ -37,7 +37,7 @@ function Lessons() {
       setLessons(data);
       setError(null);
     } catch (err) {
-      setError('Failed to load lessons. Make sure the backend is running on http://localhost:8080');
+      setError('Failed to load lessons. Make sure the backend is running.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -72,12 +72,11 @@ function Lessons() {
     try {
       const progress = await enrollmentApi.getCourseProgress(selectedCourseId);
       const progressMap = {};
-      progress.lessons.forEach(lp => {
+      progress.lessons.forEach((lp) => {
         progressMap[lp.lesson.id] = lp.completed;
       });
       setLessonProgress(progressMap);
     } catch (err) {
-      // If user is not enrolled or backend returns a validation error, just log quietly
       if (err.response?.status === 400 || err.response?.status === 403 || err.response?.status === 404) {
         console.warn('Lessons: failed to load course progress (likely not enrolled yet):', err.response?.data || err.message);
       } else {
@@ -96,162 +95,133 @@ function Lessons() {
   const handleCompleteLesson = async (lessonId) => {
     try {
       await enrollmentApi.completeLesson(lessonId);
-      setLessonProgress(prev => ({ ...prev, [lessonId]: true }));
+      setLessonProgress((prev) => ({ ...prev, [lessonId]: true }));
       playCompletionSound();
-      await loadProgress(); // Reload to get updated stats
+      await loadProgress();
     } catch (err) {
       alert('Failed to mark lesson as complete. Make sure you are enrolled in the course.');
       console.error(err);
     }
   };
 
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    if (url.includes('youtube.com/embed/')) return url;
+    if (url.includes('youtube.com/watch?v=')) return url.replace('youtube.com/watch?v=', 'youtube.com/embed/');
+    if (url.includes('youtu.be/')) return url.replace('youtu.be/', 'youtube.com/embed/');
+    return url;
+  };
+
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LeafLoader label="loading lessons" />;
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Error: </strong>
-        <span className="block sm:inline">{error}</span>
+      <div className="ml-card p-6 my-12 max-w-page mx-auto" role="alert">
+        <strong className="font-serif text-ink">A small pause. </strong>
+        <span className="text-ink-soft">{error}</span>
       </div>
     );
   }
 
+  const completedCount = Object.values(lessonProgress).filter(Boolean).length;
+  const inputStyle = { background: 'transparent', border: '1px solid var(--hair-strong)', color: 'var(--ink)' };
+
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-gray-900">Lessons</h2>
+    <div className="ml-screen-fade max-w-page mx-auto py-12">
+      <div className="flex items-end justify-between gap-6 flex-wrap mb-8">
+        <div>
+          <Kicker className="mb-4">all lessons</Kicker>
+          <h1 className="font-serif text-[clamp(34px,5vw,52px)] leading-[1.05] tracking-tight2 text-ink">Lessons</h1>
+        </div>
         {canCreateLesson && (
-          <Link
-            to="/lessons/create"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 ease-in-out"
-          >
-            + Create Lesson
+          <Link to="/lessons/create" className="ml-button-primary">
+            new lesson
+            <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
           </Link>
         )}
       </div>
 
-      <div className="mb-6">
-        <label htmlFor="course-filter" className="block text-sm font-medium text-gray-700 mb-2">
-          Filter by Course:
-        </label>
+      <div className="mb-8 flex items-center gap-3 flex-wrap">
+        <span className="font-mono text-[11px] tracking-widest uppercase text-ink-faint">filter by course</span>
         <select
-          id="course-filter"
           value={selectedCourseId || ''}
           onChange={(e) => setSelectedCourseId(e.target.value ? parseInt(e.target.value) : null)}
-          className="block w-full sm:w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          className="text-[14px] px-3 py-2 rounded"
+          style={inputStyle}
         >
-          <option value="">All Lessons</option>
+          <option value="">All lessons</option>
           {courses.map((course) => (
-            <option key={course.id} value={course.id}>
-              {course.title}
-            </option>
+            <option key={course.id} value={course.id}>{course.title}</option>
           ))}
         </select>
       </div>
 
       {isAuthenticated && selectedCourseId && lessons.length > 0 && (
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span>
-              {Object.values(lessonProgress).filter(Boolean).length} / {lessons.length} lessons completed
-            </span>
-            <span>
-              {Math.round((Object.values(lessonProgress).filter(Boolean).length / lessons.length) * 100)}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-              style={{ width: `${(Object.values(lessonProgress).filter(Boolean).length / lessons.length) * 100}%` }}
-            />
+        <div className="mb-8 flex items-center gap-4">
+          <span className="font-mono text-[11px] tracking-widest text-ink-faint">{completedCount}/{lessons.length}</span>
+          <div className="overflow-x-auto">
+            <LeafRow total={lessons.length} completed={completedCount} size={14} gap={7} />
           </div>
         </div>
       )}
+
       {lessons.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No lessons found. Create your first lesson!</p>
+        <div className="text-center py-20 text-ink-faint">
+          <Leaf size={40} strokeWidth={1} />
+          <p className="mt-4 text-[15px]">No lessons found yet.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {lessons.map((lesson) => (
-            <div
-              key={lesson.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
-            >
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{lesson.title}</h3>
-                <p className="text-gray-600 mb-4 line-clamp-3">{lesson.content || 'No content'}</p>
-                {lesson.course && (
-                  <div className="mb-2">
-                    <span className="text-sm text-gray-500">Course: </span>
-                    <Link to={`/courses/${lesson.course.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
-                      {lesson.course.title}
-                    </Link>
-                  </div>
-                )}
-                {isAuthenticated && selectedCourseId && lessonProgress[lesson.id] && (
-                  <div className="mb-2">
-                    <span className="text-sm text-green-600">✓ Completed</span>
-                  </div>
-                )}
-                <div className="mt-4 space-y-2">
-                  {lesson.videoUrl && (
-                    <div className="mb-2">
-                      {lesson.videoUrl.includes('youtube.com/embed/') || lesson.videoUrl.includes('youtube.com/watch') || lesson.videoUrl.includes('youtu.be/') ? (
-                        <div className="relative pb-[56.25%] h-0 overflow-hidden rounded">
-                          <iframe
-                            className="absolute top-0 left-0 w-full h-full"
-                            src={lesson.videoUrl.includes('youtube.com/embed/') ? lesson.videoUrl : 
-                                 lesson.videoUrl.includes('youtube.com/watch?v=') ? lesson.videoUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/') :
-                                 lesson.videoUrl.includes('youtu.be/') ? lesson.videoUrl.replace('youtu.be/', 'youtube.com/embed/') : lesson.videoUrl}
-                            title={lesson.title}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          ></iframe>
-                        </div>
-                      ) : (
-                        <a
-                          href={lesson.videoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          📹 View Video
-                        </a>
-                      )}
-                    </div>
-                  )}
-                  {lesson.pdfUrl && (
-                    <a
-                      href={lesson.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-sm text-red-600 hover:text-red-800"
-                    >
-                      📄 View PDF
-                    </a>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
+          {lessons.map((lesson) => {
+            const embedUrl = getEmbedUrl(lesson.videoUrl);
+            const done = isAuthenticated && selectedCourseId && lessonProgress[lesson.id];
+            return (
+              <article key={lesson.id} className="ml-card p-7 flex flex-col">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h3 className="font-serif text-[22px] text-ink leading-tight">{lesson.title}</h3>
+                  {done && (
+                    <span className="text-moss shrink-0"><Leaf size={16} strokeWidth={0} /></span>
                   )}
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                  <span className="text-sm text-indigo-600 font-medium">ID: {lesson.id}</span>
+                <p className="text-[14px] text-ink-soft leading-relaxed line-clamp-3 mb-4">{lesson.content || 'No content'}</p>
+
+                {lesson.course && (
+                  <div className="text-[12px] text-ink-faint mb-3">
+                    course:{' '}
+                    <Link to={`/courses/${lesson.course.id}`} className="ml-link">{lesson.course.title}</Link>
+                  </div>
+                )}
+
+                {embedUrl && (
+                  <div className="relative w-full overflow-hidden rounded mb-3" style={{ paddingBottom: '56.25%', border: '1px solid var(--hair)' }}>
+                    <iframe
+                      className="absolute inset-0 w-full h-full"
+                      src={embedUrl}
+                      title={lesson.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
+                {lesson.pdfUrl && (
+                  <a href={lesson.pdfUrl} target="_blank" rel="noopener noreferrer" className="ml-link text-[13px] mb-3 inline-flex items-center gap-2">
+                    <Leaf size={12} strokeWidth={0} color="var(--moss)" /> open pdf →
+                  </a>
+                )}
+
+                <div className="mt-auto pt-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--hair)' }}>
+                  <span className="font-mono text-[11px] tracking-wider text-ink-faint">lesson {lesson.id}</span>
                   {isAuthenticated && selectedCourseId && !lessonProgress[lesson.id] && (
-                    <button
-                      onClick={() => handleCompleteLesson(lesson.id)}
-                      className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded"
-                    >
-                      Mark Complete
+                    <button onClick={() => handleCompleteLesson(lesson.id)} className="text-[12px] text-moss-deep flex items-center gap-1.5">
+                      <Leaf size={11} strokeWidth={1.2} /> mark complete
                     </button>
                   )}
                 </div>
-              </div>
-            </div>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
@@ -259,4 +229,3 @@ function Lessons() {
 }
 
 export default Lessons;
-

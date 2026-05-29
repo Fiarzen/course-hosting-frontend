@@ -3,9 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { enrollmentApi, authApi } from '../api/api';
 import { formatPrice } from '../utils/pricing';
+import { Leaf, Kicker, SectionHeading, LeafTag, LeafRow, LeafLoader } from './Leaf';
+
+function Stat({ label, value }) {
+  return (
+    <div>
+      <div className="font-mono text-[11px] tracking-widest uppercase text-ink-faint mb-3">{label}</div>
+      <div className="font-serif text-[36px] text-ink leading-none">{value}</div>
+    </div>
+  );
+}
 
 function Profile() {
-  const { user, isAuthenticated, refreshUser } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,11 +79,9 @@ function Profile() {
   const handleCompleteLesson = async (lessonId) => {
     try {
       await enrollmentApi.completeLesson(lessonId);
-      // Reload progress
       if (selectedCourse) {
         const progress = await enrollmentApi.getCourseProgress(selectedCourse.course.id);
         setCourseProgress(progress);
-        // Also reload enrolled courses to update progress
         loadEnrolledCourses();
       }
     } catch (err) {
@@ -106,251 +114,247 @@ function Profile() {
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LeafLoader label="loading your library" />;
   }
 
-  return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">My Profile</h2>
+  const totalLeaves = enrolledCourses.reduce((s, e) => s + (e.completedLessons || 0), 0);
+  const tending = enrolledCourses.filter((e) => (e.completedLessons || 0) < (e.totalLessons || 0));
+  const finished = enrolledCourses.filter((e) => (e.totalLessons || 0) > 0 && (e.completedLessons || 0) === (e.totalLessons || 0));
+  const readingMinutes = enrolledCourses.reduce((s, e) => s + (e.completedLessons || 0) * 6, 0);
+  const initial = (user?.name || user?.email || '?')[0]?.toLowerCase();
 
-        {/* User Info */}
-        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h3>
-          <div className="space-y-2">
-            <p><span className="font-medium">Name:</span> {user?.name || 'Not set'}</p>
-            <p><span className="font-medium">Email:</span> {user?.email}</p>
-            <p>
-              <span className="font-medium">Role:</span>{' '}
-              <span className={`px-2 py-1 text-xs rounded-full ${
-                user?.role === 'ADMIN'
-                  ? 'bg-purple-100 text-purple-800'
-                  : user?.role === 'CREATOR'
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-indigo-100 text-indigo-800'
-              }`}>
-                {user?.role || 'STUDENT'}
-              </span>
-            </p>
+  return (
+    <div className="ml-screen-fade max-w-page mx-auto py-12">
+      {/* Header */}
+      <header className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] gap-7 items-center pb-8" style={{ borderBottom: '1px solid var(--hair)' }}>
+        <span
+          className="grid place-items-center rounded-full"
+          style={{ width: 84, height: 84, background: 'var(--moss-wash)', border: '1px solid var(--hair-strong)', color: 'var(--moss-deep)' }}
+        >
+          <span className="font-serif text-[38px] leading-none">{initial}</span>
+        </span>
+        <div>
+          <Kicker className="mb-2">account · {(user?.role || 'STUDENT').toLowerCase()}</Kicker>
+          <h1 className="font-serif text-[clamp(34px,5vw,48px)] leading-[1.05] text-ink">{user?.name || 'your account'}</h1>
+          <div className="mt-2 text-[14px] text-ink-soft">
+            {user?.email}
             {user?.emailVerified === true && (
-              <p className="flex items-center gap-2 text-sm text-green-700">
-                <span>Email verified</span>
-                <span className="text-green-500">✓</span>
-              </p>
-            )}
-            {user?.emailVerified === false && (
-              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800 font-medium">Email not verified</p>
-                <p className="text-xs text-amber-700 mt-1">
-                  Check your inbox for a verification link, or request a new one.
-                </p>
-                {verificationMessage && (
-                  <p className={`text-xs mt-2 font-medium ${
-                    verificationMessage.type === 'success' ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {verificationMessage.text}
-                  </p>
-                )}
-                <button
-                  onClick={handleResendVerification}
-                  disabled={resendingVerification}
-                  className="mt-2 text-xs bg-amber-600 hover:bg-amber-700 text-white py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {resendingVerification ? 'Sending...' : 'Resend verification email'}
-                </button>
-              </div>
+              <span className="ml-3 inline-flex items-center gap-1.5 text-moss text-[12px]">
+                <Leaf size={10} strokeWidth={0} /> verified
+              </span>
             )}
           </div>
         </div>
+      </header>
 
-        {/* Enrolled Courses */}
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">My Enrolled Courses</h3>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
+      {/* Email verification banner */}
+      {user?.emailVerified === false && (
+        <div
+          className="mt-6 rounded-md p-5"
+          style={{ background: 'color-mix(in oklab, var(--gold) 10%, transparent)', border: '1px solid color-mix(in oklab, var(--gold) 35%, transparent)' }}
+        >
+          <p className="text-[14px] text-ink font-medium">Your email isn't verified yet</p>
+          <p className="text-[13px] text-ink-soft mt-1">
+            Check your inbox for a verification link, or request a new one.
+          </p>
+          {verificationMessage && (
+            <p className={`text-[12px] mt-2 ${verificationMessage.type === 'success' ? 'text-moss-deep' : 'text-ink'}`}>
+              {verificationMessage.text}
+            </p>
           )}
+          <button onClick={handleResendVerification} disabled={resendingVerification} className="ml-button-ghost mt-3 text-[12px] py-2 px-4">
+            {resendingVerification ? 'sending…' : 'resend verification email'}
+          </button>
+        </div>
+      )}
 
-          {enrolledCourses.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">You haven't enrolled in any courses yet.</p>
-              <button
-                onClick={() => navigate('/courses')}
-                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
-              >
-                Browse Courses
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {enrolledCourses.map((enrollment) => (
-                <div
-                  key={enrollment.course.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-2 mb-2 flex-wrap">
-                        <Link to={`/courses/${enrollment.course.id}`}>
-                          <h4 className="text-lg font-semibold text-gray-900 hover:text-indigo-600">
-                            {enrollment.course.title}
-                          </h4>
+      {/* Stats */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-8 py-10" style={{ borderBottom: '1px solid var(--hair)' }}>
+        <Stat label="leaves unfurled" value={String(totalLeaves)} />
+        <Stat label="courses tending" value={String(tending.length)} />
+        <Stat label="courses finished" value={String(finished.length)} />
+        <Stat label="reading minutes" value={String(readingMinutes)} />
+      </section>
+
+      {error && (
+        <div className="mt-6 ml-card p-4 text-[14px] text-ink-soft" role="alert">{error}</div>
+      )}
+
+      {enrolledCourses.length === 0 ? (
+        <div className="text-center py-24 text-ink-faint">
+          <Leaf size={40} strokeWidth={1} />
+          <p className="mt-4 text-[15px]">You haven't planted any courses yet.</p>
+          <button onClick={() => navigate('/courses')} className="ml-button-primary mt-6">
+            browse the catalogue
+            <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
+          </button>
+        </div>
+      ) : (
+        <>
+          {tending.length > 0 && (
+            <section className="pt-14 pb-6">
+              <SectionHeading kicker="currently tending">In progress</SectionHeading>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
+                {tending.map((enrollment) => {
+                  const c = enrollment.course;
+                  const completed = enrollment.completedLessons || 0;
+                  const total = enrollment.totalLessons || 0;
+                  return (
+                    <article key={c.id} className="ml-card p-7">
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <Link to={`/courses/${c.id}`}>
+                          <h4 className="font-serif text-[22px] text-ink leading-tight">{c.title}</h4>
                         </Link>
-                        {enrollment.course.isPaid ? (
-                          <span className="flex-shrink-0 mt-1 inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-                            {formatPrice(enrollment.course.priceCents, enrollment.course.currency) || 'Paid'}
+                        {c.isPaid ? (
+                          <span className="font-mono text-[11px] text-ink-faint whitespace-nowrap">
+                            {formatPrice(c.priceCents, c.currency) || 'paid'}
                           </span>
                         ) : (
-                          <span className="flex-shrink-0 mt-1 inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            Free
-                          </span>
+                          <span className="font-mono text-[11px] text-ink-faint">free</span>
                         )}
                       </div>
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {enrollment.course.description || 'No description'}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-                        <span>Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}</span>
-                        <span>
-                          Progress: {enrollment.completedLessons} / {enrollment.totalLessons} lessons
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-indigo-600 h-2 rounded-full transition-all"
-                            style={{ width: `${enrollment.progress}%` }}
-                          ></div>
+                      {total > 0 && (
+                        <div className="mt-3 overflow-x-auto">
+                          <LeafRow total={total} completed={completed} size={14} gap={7} />
                         </div>
-                        <span className="text-xs text-gray-500 mt-1">
-                          {Math.round(enrollment.progress)}% Complete
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col space-y-2 ml-4 sm:space-y-0 sm:space-x-2 sm:flex-row">
-                      <button
-                        onClick={() => handleViewProgress(enrollment)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded"
-                      >
-                        View Progress
-                      </button>
-                      <button
-                        onClick={() => handleUnenroll(enrollment.course.id)}
-                        disabled={unenrolling[enrollment.course.id]}
-                        className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {unenrolling[enrollment.course.id] ? 'Unenrolling...' : 'Unenroll'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Course Progress Modal */}
-        {selectedCourse && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    {selectedCourse.course.title} - Progress
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setSelectedCourse(null);
-                      setCourseProgress(null);
-                    }}
-                    className="text-gray-500 hover:text-gray-700 text-2xl"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {loadingProgress ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                  </div>
-                ) : courseProgress ? (
-                  <div>
-                    <div className="mb-4 p-4 bg-indigo-50 rounded-lg">
-                      <p className="text-sm text-gray-600">
-                        Completed: {courseProgress.completedLessons} / {courseProgress.totalLessons} lessons
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
-                        <div
-                          className="bg-indigo-600 h-3 rounded-full transition-all"
-                          style={{ width: `${courseProgress.progress}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-sm font-medium text-indigo-600 mt-2">
-                        {Math.round(courseProgress.progress)}% Complete
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      {courseProgress.lessons.map((lessonProgress) => (
-                        <div
-                          key={lessonProgress.lesson.id}
-                          className={`border rounded-lg p-4 ${
-                            lessonProgress.completed
-                              ? 'border-green-300 bg-green-50'
-                              : 'border-gray-200 bg-white'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                {lessonProgress.completed ? (
-                                  <span className="text-green-600 text-xl">✓</span>
-                                ) : (
-                                  <span className="text-gray-400 text-xl">○</span>
-                                )}
-                                <h4 className="font-semibold text-gray-900">
-                                  {lessonProgress.lesson.title}
-                                </h4>
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                {lessonProgress.lesson.content || 'No content'}
-                              </p>
-                              {lessonProgress.completed && lessonProgress.completedAt && (
-                                <p className="text-xs text-gray-500 mt-2">
-                                  Completed: {new Date(lessonProgress.completedAt).toLocaleString()}
-                                </p>
-                              )}
-                            </div>
-                            {!lessonProgress.completed && (
-                              <button
-                                onClick={() => handleCompleteLesson(lessonProgress.lesson.id)}
-                                className="ml-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded"
-                              >
-                                Mark Complete
-                              </button>
-                            )}
-                          </div>
+                      )}
+                      <div className="mt-4 pt-4 flex items-center justify-between text-[12px]" style={{ borderTop: '1px solid var(--hair)' }}>
+                        <span className="text-ink-soft">{completed} of {total} lessons</span>
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => handleViewProgress(enrollment)} className="text-moss-deep">progress</button>
+                          <button
+                            onClick={() => handleUnenroll(c.id)}
+                            disabled={unenrolling[c.id]}
+                            className="text-ink-faint hover:text-ink"
+                          >
+                            {unenrolling[c.id] ? 'unenrolling…' : 'unenroll'}
+                          </button>
+                          <Link to={`/courses/${c.id}`} className="text-ink-soft">continue →</Link>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No progress data available.</p>
-                )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
+            </section>
+          )}
+
+          {finished.length > 0 && (
+            <section className="pt-8 pb-4">
+              <SectionHeading kicker="finished">Courses you've completed</SectionHeading>
+              <ul className="list-none p-0 m-0">
+                {finished.map((enrollment, i) => {
+                  const c = enrollment.course;
+                  return (
+                    <li
+                      key={c.id}
+                      className="grid grid-cols-[1fr_auto_auto] gap-6 items-center py-6"
+                      style={{ borderTop: i === 0 ? '1px solid var(--hair)' : 'none', borderBottom: '1px solid var(--hair)' }}
+                    >
+                      <div>
+                        <Link to={`/courses/${c.id}`}>
+                          <div className="font-serif text-[22px] text-ink leading-tight">{c.title}</div>
+                        </Link>
+                        <div className="text-[13px] text-ink-faint mt-1">
+                          {c.author?.name || c.author?.email || 'mindleaf'} · {enrollment.totalLessons} lessons
+                        </div>
+                      </div>
+                      <LeafTag>complete</LeafTag>
+                      <button
+                        onClick={() => handleUnenroll(c.id)}
+                        disabled={unenrolling[c.id]}
+                        className="text-[13px] text-ink-faint hover:text-ink"
+                      >
+                        {unenrolling[c.id] ? 'unenrolling…' : 'unenroll'}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+        </>
+      )}
+
+      {/* Course Progress Modal */}
+      {selectedCourse && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'color-mix(in oklab, var(--ink) 45%, transparent)' }}
+          onClick={() => { setSelectedCourse(null); setCourseProgress(null); }}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-md"
+            style={{ background: 'var(--paper)', border: '1px solid var(--hair-strong)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <Kicker className="mb-2 text-ink-faint normal-case">progress</Kicker>
+                  <h3 className="font-serif text-[28px] text-ink leading-tight">{selectedCourse.course.title}</h3>
+                </div>
+                <button
+                  onClick={() => { setSelectedCourse(null); setCourseProgress(null); }}
+                  className="text-ink-faint hover:text-ink text-2xl leading-none"
+                  aria-label="close"
+                >
+                  ×
+                </button>
+              </div>
+
+              {loadingProgress ? (
+                <LeafLoader label="loading progress" />
+              ) : courseProgress ? (
+                <div>
+                  <div className="mb-6 flex items-center justify-between">
+                    <span className="text-[13px] text-ink-soft">
+                      {courseProgress.completedLessons} of {courseProgress.totalLessons} lessons · {Math.round(courseProgress.progress)}%
+                    </span>
+                    <div className="overflow-x-auto">
+                      <LeafRow total={courseProgress.totalLessons} completed={courseProgress.completedLessons} size={14} gap={7} />
+                    </div>
+                  </div>
+
+                  <ul className="list-none p-0 m-0">
+                    {courseProgress.lessons.map((lp, i) => (
+                      <li
+                        key={lp.lesson.id}
+                        className="grid grid-cols-[auto_1fr_auto] gap-4 items-start py-4"
+                        style={{ borderTop: i === 0 ? '1px solid var(--hair)' : 'none', borderBottom: '1px solid var(--hair)' }}
+                      >
+                        <span style={{ color: lp.completed ? 'var(--moss)' : 'var(--ink-faint)', opacity: lp.completed ? 1 : 0.5 }}>
+                          <Leaf size={16} filled={lp.completed} strokeWidth={lp.completed ? 0 : 1.2} />
+                        </span>
+                        <div>
+                          <h4 className="font-serif text-[17px] text-ink leading-snug">{lp.lesson.title}</h4>
+                          {lp.completed && lp.completedAt && (
+                            <p className="text-[11px] text-ink-faint mt-1">
+                              completed {new Date(lp.completedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        {!lp.completed && (
+                          <button
+                            onClick={() => handleCompleteLesson(lp.lesson.id)}
+                            className="text-[12px] text-moss-deep flex items-center gap-1.5 whitespace-nowrap"
+                          >
+                            <Leaf size={11} strokeWidth={1.2} /> mark complete
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-ink-faint text-[14px]">No progress data available.</p>
+              )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default Profile;
-

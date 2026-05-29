@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { usersApi } from "../api/api";
+import { Leaf, Field } from "./Leaf";
+import { AuthShell } from "./AuthShell";
 
 function Register() {
   const navigate = useNavigate();
@@ -10,17 +12,14 @@ function Register() {
     password: "",
     confirmPassword: "",
   });
+  const [role, setRole] = useState("learner"); // decorative — the API has no role on register
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error when user starts typing
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError(null);
   };
 
@@ -29,24 +28,19 @@ function Register() {
       setError("Email and password are required");
       return false;
     }
-
     if (formData.password.length < 6) {
       setError("Password must be at least 6 characters long");
       return false;
     }
-
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return false;
     }
-
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError("Please enter a valid email address");
       return false;
     }
-
     return true;
   };
 
@@ -60,18 +54,14 @@ function Register() {
     }
 
     setLoading(true);
-
     try {
       const registrationData = {
         name: formData.name || undefined,
         email: formData.email,
         password: formData.password,
       };
-
       await usersApi.register(registrationData);
       setSuccess(true);
-
-      // Redirect to login or home page after 2 seconds
       setTimeout(() => {
         navigate("/");
       }, 2000);
@@ -79,9 +69,7 @@ function Register() {
       if (err.response && err.response.data && err.response.data.error) {
         setError(err.response.data.error);
       } else if (err.response && err.response.status === 409) {
-        setError(
-          "This email is already registered. Please use a different email or try logging in."
-        );
+        setError("This email is already registered. Please use a different email or try logging in.");
       } else {
         setError("Registration failed. Please try again.");
       }
@@ -92,150 +80,130 @@ function Register() {
   };
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="max-w-md mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center">
-          Create Account
-        </h2>
-        <p className="text-gray-600 text-center mb-6">
-          Register as a student to start learning
+    <AuthShell
+      kicker="begin"
+      title="Create a quiet account"
+      intro="No newsletters, no streaks. Just the courses, the leaves, and the time you give them."
+      progress={2}
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        {error && (
+          <div
+            role="alert"
+            className="mb-6 rounded px-4 py-3 text-[13px]"
+            style={{ background: "color-mix(in oklab, var(--gold) 12%, transparent)", color: "var(--ink)", border: "1px solid color-mix(in oklab, var(--gold) 40%, transparent)" }}
+          >
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div
+            role="alert"
+            className="mb-6 flex items-center gap-3 rounded px-4 py-3 text-[13px]"
+            style={{ background: "var(--moss-wash)", color: "var(--moss-deep)", border: "1px solid color-mix(in oklab, var(--moss-soft) 60%, transparent)" }}
+          >
+            <Leaf size={16} strokeWidth={0} />
+            <span>
+              <strong className="text-ink">Account created! </strong>
+              Check your inbox for a verification email. Taking you home…
+            </span>
+          </div>
+        )}
+
+        <Field label="Name" hint="optional">
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            autoComplete="name"
+            placeholder="what to call you"
+            className="ml-input"
+          />
+        </Field>
+
+        <Field label="Email" required>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            autoComplete="email"
+            placeholder="you@example.com"
+            className="ml-input"
+          />
+        </Field>
+
+        <Field label="Password" required hint="at least 6 characters">
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            minLength={6}
+            autoComplete="new-password"
+            placeholder="••••••••"
+            className="ml-input"
+          />
+        </Field>
+
+        <Field label="Confirm password" required>
+          <input
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+            autoComplete="new-password"
+            placeholder="••••••••"
+            className="ml-input"
+          />
+        </Field>
+
+        <Field label="I'm here to">
+          <div className="flex gap-2.5 mt-1">
+            {[["learner", "learn"], ["creator", "teach"]].map(([key, label]) => {
+              const activeRole = role === key;
+              return (
+                <button
+                  type="button"
+                  key={key}
+                  onClick={() => setRole(key)}
+                  className="flex-1 flex items-center justify-center gap-2.5 rounded text-[14px]"
+                  style={{
+                    padding: "14px 18px",
+                    border: "1px solid " + (activeRole ? "var(--moss)" : "var(--hair-strong)"),
+                    background: activeRole ? "var(--moss-wash)" : "transparent",
+                    color: activeRole ? "var(--moss-deep)" : "var(--ink-soft)",
+                    transition: "background 200ms ease, border-color 200ms ease",
+                  }}
+                >
+                  <Leaf size={12} filled={activeRole} strokeWidth={activeRole ? 0 : 1.2} /> {label}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
+        <div className="mt-9 flex items-center justify-between gap-3 flex-wrap">
+          <button type="submit" disabled={loading || success} className="ml-button-primary">
+            {loading ? "creating account…" : success ? "account created" : "register"}
+            <Leaf size={12} strokeWidth={0} tilt={-20} color="var(--moss-soft)" />
+          </button>
+          <Link to="/login" className="text-[13px] text-ink-soft">
+            already have an account? sign in
+          </Link>
+        </div>
+
+        <p className="mt-8 text-[12px] text-ink-faint leading-relaxed max-w-[420px]">
+          By creating an account you agree to our quiet terms — no spam, no third-party tracking,
+          and no recommendation engine.
         </p>
-
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4"
-        >
-          {error && (
-            <div
-              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div
-              className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4"
-              role="alert"
-            >
-              <strong className="font-bold">Account created! </strong>
-              <span>
-                Check your inbox for a verification email. Redirecting to home...
-              </span>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <label
-              htmlFor="name"
-              className="block text-gray-700 text-sm font-bold mb-2"
-            >
-              Name (Optional)
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
-              placeholder="Enter your name"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label
-              htmlFor="email"
-              className="block text-gray-700 text-sm font-bold mb-2"
-            >
-              Email *
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
-              placeholder="Enter your email"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label
-              htmlFor="password"
-              className="block text-gray-700 text-sm font-bold mb-2"
-            >
-              Password *
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={6}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
-              placeholder="Enter your password (min. 6 characters)"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label
-              htmlFor="confirmPassword"
-              className="block text-gray-700 text-sm font-bold mb-2"
-            >
-              Confirm Password *
-            </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500"
-              placeholder="Confirm your password"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Link
-              to="/"
-              className="text-sm text-indigo-600 hover:text-indigo-800"
-            >
-              Back to Home
-            </Link>
-            <button
-              type="submit"
-              disabled={loading || success}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading
-                ? "Creating Account..."
-                : success
-                ? "Account Created!"
-                : "Register"}
-            </button>
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link
-                to="/login"
-                className="text-indigo-600 hover:text-indigo-800 font-medium"
-              >
-                Go to Login
-              </Link>
-            </p>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </AuthShell>
   );
 }
 

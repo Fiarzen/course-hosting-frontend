@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { coursesApi, lessonsApi, enrollmentApi, paymentsApi } from '../api/api';
 import { formatPrice } from '../utils/pricing';
 import { playCompletionSound } from '../utils/sound';
+import { Leaf, GrowingStem, Kicker, SectionHeading, LeafTag, LeafLoader } from './Leaf';
 
 function CourseDetail() {
   const { courseId } = useParams();
@@ -19,83 +20,61 @@ function CourseDetail() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [payingWithPaypal, setPayingWithPaypal] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (courseId) {
-      loadCourse();
-      loadLessons();
-      if (isAuthenticated) {
-        checkEnrollment();
-        loadProgress();
-        loadPaymentStatus();
-      }
+    if (!courseId) return;
+    loadCourse();
+    loadLessons();
+    if (isAuthenticated) {
+      checkEnrollment();
+      loadProgress();
+      loadPaymentStatus();
     }
   }, [courseId, isAuthenticated]);
 
   const loadCourse = async () => {
     try {
       const courses = await coursesApi.getAll();
-      const foundCourse = courses.find(c => c.id === parseInt(courseId));
-      if (foundCourse) {
-        setCourse(foundCourse);
-      } else {
-        setError('Course not found');
-      }
-    } catch (err) {
-      setError('Failed to load course');
-      console.error(err);
-    }
+      const found = courses.find((c) => c.id === parseInt(courseId));
+      if (found) setCourse(found); else setError('Course not found');
+    } catch (err) { setError('Failed to load course'); console.error(err); }
   };
 
   const loadLessons = async () => {
     try {
-      const numericCourseId = parseInt(courseId, 10);
-      if (Number.isNaN(numericCourseId)) return;
-      const data = await lessonsApi.getByCourse(numericCourseId);
+      const id = parseInt(courseId, 10);
+      if (Number.isNaN(id)) return;
+      const data = await lessonsApi.getByCourse(id);
       setLessons(data);
-    } catch (err) {
-      setError('Failed to load lessons');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError('Failed to load lessons'); console.error(err); }
+    finally { setLoading(false); }
   };
 
   const checkEnrollment = async () => {
     try {
-      const enrolledCourses = await enrollmentApi.getMyCourses();
-      const enrolled = enrolledCourses.some(e => e.course.id === parseInt(courseId));
-      setIsEnrolled(enrolled);
-    } catch (err) {
-      console.error('Failed to check enrollment:', err);
-    }
+      const enrolled = await enrollmentApi.getMyCourses();
+      setIsEnrolled(enrolled.some((e) => e.course.id === parseInt(courseId)));
+    } catch (err) { console.error(err); }
   };
 
   const loadPaymentStatus = async () => {
     try {
       const status = await paymentsApi.getPaymentStatus(parseInt(courseId, 10));
       setPaymentStatus(status);
-    } catch (err) {
-      console.error('Failed to load payment status:', err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const loadProgress = async () => {
     try {
-      const numericCourseId = parseInt(courseId, 10);
-      if (Number.isNaN(numericCourseId)) return;
-      const progress = await enrollmentApi.getCourseProgress(numericCourseId);
-      const progressMap = {};
-      progress.lessons.forEach(lp => {
-        progressMap[lp.lesson.id] = lp.completed;
-      });
-      setLessonProgress(progressMap);
+      const id = parseInt(courseId, 10);
+      if (Number.isNaN(id)) return;
+      const progress = await enrollmentApi.getCourseProgress(id);
+      const map = {};
+      progress.lessons.forEach((lp) => { map[lp.lesson.id] = lp.completed; });
+      setLessonProgress(map);
     } catch (err) {
-      if (err.response?.status === 400 || err.response?.status === 403 || err.response?.status === 404) {
-        console.warn('Failed to load course progress (likely not enrolled yet):', err.response?.data || err.message);
-      } else {
-        console.error('Failed to load progress:', err);
-      }
+      if (![400, 403, 404].includes(err.response?.status)) console.error(err);
     }
   };
 
@@ -109,26 +88,14 @@ function CourseDetail() {
       alert('Successfully enrolled in course!');
     } catch (err) {
       const status = err.response?.status;
-      const backendMessage = err.response?.data?.error;
+      const msg = err.response?.data?.error;
       const code = err.response?.data?.code;
-
-      if (status === 409) {
-        setIsEnrolled(true);
-        await loadProgress();
-        alert('You are already enrolled in this course.');
-      } else if (status === 402 || code === 'PAYMENT_REQUIRED') {
-        alert('This is a paid course. Please purchase it to enroll.');
-      } else if (status === 403 && backendMessage?.includes('allowlist')) {
-        alert('This course is restricted to an allowlist of users, and your account is not on that list.');
-      } else if (backendMessage) {
-        alert(backendMessage);
-      } else {
-        alert('Failed to enroll in course. Please try again.');
-      }
+      if (status === 409) { setIsEnrolled(true); await loadProgress(); alert('You are already enrolled.'); }
+      else if (status === 402 || code === 'PAYMENT_REQUIRED') alert('This is a paid course. Please purchase it to enroll.');
+      else if (status === 403 && msg?.includes('allowlist')) alert('This course is restricted.');
+      else alert(msg || 'Failed to enroll.');
       console.error(err);
-    } finally {
-      setEnrolling(false);
-    }
+    } finally { setEnrolling(false); }
   };
 
   const handleBuyNow = async () => {
@@ -137,22 +104,8 @@ function CourseDetail() {
       const result = await paymentsApi.createCheckoutSession(parseInt(courseId));
       sessionStorage.setItem('stripeCheckout', JSON.stringify({ courseId: parseInt(courseId) }));
       window.location.href = result.checkoutUrl;
-    } catch (err) {
-      const code = err.response?.data?.code;
-      const msg = err.response?.data?.error;
-      if (code === 'ALREADY_ENROLLED') {
-        setIsEnrolled(true);
-        await loadProgress();
-        alert('You are already enrolled in this course.');
-      } else if (msg) {
-        alert(msg);
-      } else {
-        alert('Failed to start checkout. Please try again.');
-      }
-      console.error(err);
-    } finally {
-      setCheckingOut(false);
-    }
+    } catch (err) { alert(err.response?.data?.error || 'Failed to start checkout.'); console.error(err); }
+    finally { setCheckingOut(false); }
   };
 
   const handlePayPal = async () => {
@@ -161,73 +114,33 @@ function CourseDetail() {
       const result = await paymentsApi.createPaypalOrder(parseInt(courseId));
       sessionStorage.setItem('stripeCheckout', JSON.stringify({ courseId: parseInt(courseId) }));
       window.location.href = result.approvalUrl;
-    } catch (err) {
-      const code = err.response?.data?.code;
-      const msg = err.response?.data?.error;
-      if (code === 'ALREADY_ENROLLED') {
-        setIsEnrolled(true);
-        await loadProgress();
-        alert('You are already enrolled in this course.');
-      } else if (msg) {
-        alert(msg);
-      } else {
-        alert('Failed to start PayPal checkout. Please try again.');
-      }
-      console.error(err);
-    } finally {
-      setPayingWithPaypal(false);
-    }
+    } catch (err) { alert(err.response?.data?.error || 'Failed to start PayPal checkout.'); console.error(err); }
+    finally { setPayingWithPaypal(false); }
   };
 
   const handleCompleteLesson = async (lessonId) => {
     try {
       await enrollmentApi.completeLesson(lessonId);
-      setLessonProgress(prev => ({ ...prev, [lessonId]: true }));
+      setLessonProgress((prev) => ({ ...prev, [lessonId]: true }));
       playCompletionSound();
       await loadProgress();
     } catch (err) {
-      const status = err.response?.status;
-      const backendMessage = err.response?.data?.error;
-      if (status === 403 || status === 401) {
-        alert(backendMessage || 'You cannot mark this lesson as complete because you are not enrolled.');
-      } else {
-        alert('Failed to mark lesson as complete. Please try again.');
-      }
+      alert(err.response?.data?.error || 'Failed to mark lesson complete.');
       console.error(err);
     }
   };
 
-  const getEmbedUrl = (url) => {
-    if (!url) return null;
-    if (url.includes('youtube.com/embed/')) return url;
-    if (url.includes('youtube.com/watch?v=')) {
-      return url.replace('youtube.com/watch?v=', 'youtube.com/embed/');
-    }
-    if (url.includes('youtu.be/')) {
-      return url.replace('youtu.be/', 'youtube.com/embed/');
-    }
-    return url;
-  };
+  if (loading) return <LeafLoader />;
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+  if (error && !course) return (
+    <div className="ml-card p-6 max-w-page mx-auto my-12" role="alert">
+      <strong className="font-serif text-ink">A small pause. </strong>
+      <span className="text-ink-soft">{error}</span>
+      <div className="mt-4">
+        <button onClick={() => navigate('/courses')} className="ml-button-primary">back to catalogue</button>
       </div>
-    );
-  }
-
-  if (error && !course) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Error: </strong>
-        <span className="block sm:inline">{error}</span>
-        <button onClick={() => navigate('/')} className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded">
-          Back to Courses
-        </button>
-      </div>
-    );
-  }
+    </div>
+  );
 
   const completedLessonsCount = Object.values(lessonProgress).filter(Boolean).length;
   const totalLessons = lessons.length;
@@ -236,197 +149,162 @@ function CourseDetail() {
   const priceLabel = isPaid ? formatPrice(course?.priceCents, course?.currency) : null;
   const hasPendingPurchase = paymentStatus?.purchase?.status === 'PENDING';
   const hasSucceededPurchase = paymentStatus?.purchase?.status === 'SUCCEEDED';
-
-  // Author/admin always see enroll directly; free courses allow direct enroll
   const isAuthorOrAdmin = user?.role === 'ADMIN' || (course?.authorId === user?.id);
   const canEnrollDirectly = !isPaid || hasSucceededPurchase || isAuthorOrAdmin;
 
-  return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/courses')}
-            className="text-indigo-600 hover:text-indigo-800 mb-4"
-          >
-            Back to Courses
-          </button>
-          <div className="flex items-start justify-between flex-wrap gap-3">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">{course?.title}</h1>
-            {isPaid && priceLabel && (
-              <span className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
-                {priceLabel}
-              </span>
-            )}
-            {!isPaid && (
-              <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
-                Free
-              </span>
-            )}
-          </div>
-          <p className="text-gray-600 mb-4">{course?.description || 'No description'}</p>
-          {course?.author && (
-            <p className="text-sm text-gray-500">
-              Author: {course.author.name || course.author.email}
-            </p>
-          )}
+  // Map lessons to the shape GrowingStem expects.
+  const stemLessons = lessons.map((l) => ({ id: l.id, title: l.title, done: !!lessonProgress[l.id] }));
 
+  return (
+    <div className="ml-screen-fade max-w-page mx-auto py-12">
+      <button onClick={() => navigate('/courses')} className="text-[13px] text-ink-soft mb-8">
+        ← back to catalogue
+      </button>
+
+      <header className="grid gap-16 items-end pb-12 mb-14 md:grid-cols-[1.4fr_1fr]" style={{ borderBottom: '1px solid var(--hair)' }}>
+        <div>
+          <Kicker className="mb-5">{totalLessons} lessons</Kicker>
+          <h1 className="font-serif text-ink leading-[1.04] tracking-tight2" style={{ fontSize: 'clamp(40px, 6vw, 76px)' }}>
+            {course?.title}
+          </h1>
+          <p className="mt-6 text-[17px] text-ink-soft leading-relaxed max-w-[580px]">
+            {course?.description || 'No description'}
+          </p>
+        </div>
+        <aside className="flex flex-col items-start md:items-end gap-7">
+          {course?.author && (
+            <div className="md:text-right">
+              <div className="text-[13px] text-ink">{course.author.name || course.author.email}</div>
+              <div className="text-[12px] text-ink-faint">author</div>
+            </div>
+          )}
+          <div className="md:text-right">
+            <Kicker className="mb-1.5 text-ink-faint normal-case">tuition</Kicker>
+            <div className="font-serif text-[36px] text-ink leading-none">{isPaid ? priceLabel : 'free'}</div>
+          </div>
           {isAuthenticated && !isEnrolled && (
-            <div className="mt-4 flex flex-wrap gap-3 items-center">
+            <div className="flex flex-col items-start md:items-end gap-2">
               {isPaid && !canEnrollDirectly && (
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleBuyNow}
-                    disabled={checkingOut || payingWithPaypal}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-5 rounded disabled:opacity-50"
-                  >
-                    {checkingOut ? 'Redirecting…' : `Pay by Card — ${priceLabel}`}
+                <div className="flex gap-2 flex-wrap md:justify-end">
+                  <button onClick={handleBuyNow} disabled={checkingOut || payingWithPaypal} className="ml-button-primary">
+                    {checkingOut ? 'redirecting…' : `pay by card · ${priceLabel}`}
                   </button>
-                  <button
-                    onClick={handlePayPal}
-                    disabled={checkingOut || payingWithPaypal}
-                    className="bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold py-2 px-5 rounded disabled:opacity-50"
-                  >
-                    {payingWithPaypal ? 'Redirecting…' : `Pay with PayPal — ${priceLabel}`}
+                  <button onClick={handlePayPal} disabled={checkingOut || payingWithPaypal} className="ml-button-ghost">
+                    {payingWithPaypal ? 'redirecting…' : 'PayPal'}
                   </button>
                 </div>
               )}
               {canEnrollDirectly && (
-                <button
-                  onClick={handleEnroll}
-                  disabled={enrolling}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
-                >
-                  {enrolling ? 'Enrolling...' : 'Enroll in Course'}
+                <button onClick={handleEnroll} disabled={enrolling} className="ml-button-primary">
+                  {enrolling ? 'enrolling…' : (isPaid ? 'begin course' : 'enroll in course')}
+                  <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
                 </button>
               )}
               {hasPendingPurchase && !hasSucceededPurchase && (
-                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-                  You have a pending payment. Complete checkout or wait for it to process.
-                </p>
-              )}
-            </div>
-          )}
-
-          {isAuthenticated && isEnrolled && (
-            <div className="mt-4 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-green-700 font-medium text-sm bg-green-50 border border-green-200 px-3 py-1 rounded-full">
-                Enrolled
-              </span>
-              {hasSucceededPurchase && paymentStatus?.purchase?.paidAt && (
-                <span className="text-xs text-gray-400">
-                  Purchased {new Date(paymentStatus.purchase.paidAt).toLocaleDateString()}
+                <span className="ml-pill">
+                  <Leaf size={9} strokeWidth={0} /> pending payment — complete checkout
                 </span>
               )}
             </div>
           )}
+          {isAuthenticated && isEnrolled && (
+            <LeafTag>tending — {completedLessonsCount} of {totalLessons}</LeafTag>
+          )}
+          {!isAuthenticated && (
+            <Link to="/login" className="ml-button-primary">
+              sign in to enroll
+              <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
+            </Link>
+          )}
+        </aside>
+      </header>
+
+      <div className="grid gap-14 md:grid-cols-[160px_1fr] items-start">
+        <div className="sticky top-24 hidden md:block">
+          <Kicker className="text-center normal-case mb-4 text-ink-faint">growth</Kicker>
+          {stemLessons.length > 0 && (
+            <GrowingStem lessons={stemLessons} currentIndex={currentIndex} onJump={(i) => setCurrentIndex(i)} />
+          )}
+          <div className="mt-4 text-center font-mono text-[11px] tracking-widest text-ink-faint">
+            {completedLessonsCount}/{totalLessons}
+          </div>
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Lessons</h2>
-          {isEnrolled && lessons.length > 0 && (
-            <div className="mb-6">
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
-                <span>{completedLessonsCount} / {totalLessons} lessons completed</span>
-                <span>{Math.round((completedLessonsCount / totalLessons) * 100)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div
-                  className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-                  style={{ width: `${(completedLessonsCount / totalLessons) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-          {lessons.length === 0 ? (
-            !isAuthenticated ? (
-              <p className="text-gray-500">
-                Please log in to see lessons for this course.
-              </p>
-            ) : (
-              <p className="text-gray-500">No lessons available for this course yet.</p>
-            )
-          ) : (
-            <div className="space-y-6">
-              {lessons.map((lesson, index) => {
-                const isCompleted = lessonProgress[lesson.id] || false;
-                const embedUrl = getEmbedUrl(lesson.videoUrl);
-                const canViewContent = isAuthenticated && isEnrolled;
+        <div>
+          <SectionHeading kicker="curriculum">Lessons</SectionHeading>
 
+          {lessons.length === 0 ? (
+            <p className="text-ink-faint">
+              {!isAuthenticated ? 'Please sign in to see lessons.' : 'No lessons available for this course yet.'}
+            </p>
+          ) : (
+            <ol className="list-none p-0 m-0">
+              {lessons.map((lesson, i) => {
+                const isCompleted = lessonProgress[lesson.id] || false;
+                const isCurrent = i === currentIndex;
+                const canViewContent = isAuthenticated && isEnrolled;
                 return (
-                  <div
-                    key={lesson.id}
-                    className={`bg-white rounded-lg shadow-md p-6 ${isCompleted ? 'border-2 border-green-300' : ''}`}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="text-sm font-medium text-indigo-600">Lesson {index + 1}</span>
-                          {isCompleted && (
-                            <span className="text-green-600 text-sm">Completed</span>
-                          )}
-                        </div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">{lesson.title}</h3>
-                        {canViewContent && (
-                          <p className="text-gray-600 mb-4">{lesson.content || 'No content'}</p>
-                        )}
-                        {!canViewContent && (
-                          <p className="text-gray-500 text-sm mb-4">
-                            {isPaid && !isEnrolled
-                              ? 'Purchase this course to view full lesson content.'
-                              : 'Enroll in this course to view full lesson content.'}
+                  <li key={lesson.id} style={{
+                    borderTop: i === 0 ? '1px solid var(--hair)' : 'none',
+                    borderBottom: '1px solid var(--hair)',
+                  }}>
+                    <div
+                      onClick={() => setCurrentIndex(i)}
+                      className="grid grid-cols-[44px_1fr_auto] gap-6 items-start py-7 cursor-pointer"
+                      style={{
+                        background: isCurrent ? 'color-mix(in oklab, var(--moss-wash) 60%, transparent)' : 'transparent',
+                        marginInline: isCurrent ? -16 : 0,
+                        paddingInline: isCurrent ? 16 : 0,
+                        borderRadius: isCurrent ? 4 : 0,
+                        transition: 'background 220ms ease, margin 220ms ease, padding 220ms ease',
+                      }}
+                    >
+                      <span className="font-mono text-[12px] tracking-widest pt-1" style={{ color: isCompleted ? 'var(--moss)' : 'var(--ink-faint)' }}>
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div>
+                        <h4 className="font-serif text-[22px] text-ink leading-tight mb-1.5">{lesson.title}</h4>
+                        {canViewContent ? (
+                          <p className="m-0 text-[14px] text-ink-soft leading-relaxed max-w-[620px]">{lesson.content || 'No content'}</p>
+                        ) : (
+                          <p className="m-0 text-[13px] text-ink-faint">
+                            {isPaid && !isEnrolled ? 'Purchase this course to view the full content.' : 'Enroll to view the full content.'}
                           </p>
                         )}
-                      </div>
-                      <div className="ml-4 flex flex-col space-y-2">
-                        <button
-                          onClick={() => navigate(`/courses/${courseId}/lessons/${lesson.id}`)}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded"
-                        >
-                          View Lesson
-                        </button>
-                      </div>
-                    </div>
-
-                    {canViewContent && embedUrl && (
-                      <div className="mb-4">
-                        <div className="relative pb-[56.25%] h-0 overflow-hidden rounded">
-                          <iframe
-                            className="absolute top-0 left-0 w-full h-full"
-                            src={embedUrl}
-                            title={lesson.title}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          ></iframe>
+                        <div className="mt-3.5 flex items-center gap-4 flex-wrap">
+                          <span className="font-mono text-[11px] tracking-wider text-ink-faint">video + pdf</span>
+                          {isAuthenticated && isEnrolled && !isCompleted && (
+                            <button onClick={(e) => { e.stopPropagation(); handleCompleteLesson(lesson.id); }}
+                              className="text-[11px] text-moss-deep flex items-center gap-1.5">
+                              <Leaf size={11} strokeWidth={1.2} /> mark complete
+                            </button>
+                          )}
+                          {isCompleted && (
+                            <span className="text-[11px] text-moss flex items-center gap-1.5">
+                              <Leaf size={11} strokeWidth={0} /> completed
+                            </span>
+                          )}
+                          {canViewContent && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/courses/${courseId}/lessons/${lesson.id}`); }}
+                              className="text-[11px] text-ink-soft"
+                            >
+                              open →
+                            </button>
+                          )}
                         </div>
                       </div>
-                    )}
-
-                    {canViewContent && lesson.pdfUrl && (
-                      <div className="mb-4">
-                        <a
-                          href={lesson.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center text-red-600 hover:text-red-800"
-                        >
-                          View PDF
-                        </a>
-                      </div>
-                    )}
-
-                    {isAuthenticated && isEnrolled && !isCompleted && (
-                      <button
-                        onClick={() => handleCompleteLesson(lesson.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded"
-                      >
-                        Mark as Complete
-                      </button>
-                    )}
-                  </div>
+                      <span style={{
+                        color: isCompleted ? 'var(--moss)' : (isCurrent ? 'var(--moss-deep)' : 'var(--ink-faint)'),
+                        opacity: isCompleted || isCurrent ? 1 : 0.5,
+                      }}>
+                        <Leaf size={22} filled={isCompleted || isCurrent} strokeWidth={isCompleted || isCurrent ? 0 : 1.2} tilt={-22 + ((i * 7) % 14)} />
+                      </span>
+                    </div>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           )}
         </div>
       </div>

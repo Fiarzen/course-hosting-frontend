@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usersApi } from '../api/api';
+import { Leaf, Kicker, RolePill, LeafLoader } from './Leaf';
 
 function Users() {
   const { user } = useAuth();
@@ -10,6 +11,8 @@ function Users() {
   const [upgrading, setUpgrading] = useState({});
   const [resetting, setResetting] = useState({});
   const [deleting, setDeleting] = useState({});
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState('all');
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -26,7 +29,6 @@ function Users() {
     try {
       setLoading(true);
       const response = await usersApi.getAll();
-      // Backend returns ResponseEntity, so data is in response.data
       const data = Array.isArray(response) ? response : (response.data || []);
       setUsers(data);
       setError(null);
@@ -46,7 +48,6 @@ function Users() {
     setUpgrading({ ...upgrading, [userId]: true });
     try {
       await usersApi.upgradeUserToCreator(userId);
-      // Reload users
       await loadUsers();
       alert('User successfully upgraded to CREATOR!');
     } catch (err) {
@@ -61,36 +62,26 @@ function Users() {
     if (!window.confirm('Generate a password reset link for this user?')) {
       return;
     }
-
     setResetting({ ...resetting, [userId]: true });
     try {
       const result = await usersApi.resetPassword(userId);
-
       let fullUrl = '';
-
-      // Prefer constructing the SPA link ourselves using the token so it always matches
-      // the front-end route (/reset-password?token=...).
       if (result?.resetToken) {
         const path = `/reset-password?token=${encodeURIComponent(result.resetToken)}`;
         fullUrl = `${window.location.origin}${path}`;
       } else if (result?.resetPath) {
         const rp = result.resetPath;
         if (/^https?:\/\//i.test(rp)) {
-          // Backend already returned a full URL; use as-is.
           fullUrl = rp;
         } else {
-          // Treat resetPath as a relative path and normalize leading slash.
           const normalizedPath = rp.startsWith('/') ? rp : `/${rp}`;
           fullUrl = `${window.location.origin}${normalizedPath}`;
         }
       }
-
       if (!fullUrl) {
         alert('Password reset link could not be generated. Please try again.');
         return;
       }
-
-      // Show a prompt so the admin can copy the link and send it to the user
       window.prompt('Copy this password reset link and send it to the user:', fullUrl);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to generate password reset link. Please try again.');
@@ -118,106 +109,133 @@ function Users() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LeafLoader label="loading people" />;
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Error: </strong>
-        <span className="block sm:inline">{error}</span>
+      <div className="ml-card p-6 my-12 max-w-page mx-auto" role="alert">
+        <strong className="font-serif text-ink">A small pause. </strong>
+        <span className="text-ink-soft">{error}</span>
       </div>
     );
   }
 
-  return (
-    <div className="px-4 py-6 sm:px-0">
-      <h2 className="text-3xl font-bold text-gray-900 mb-6">Users</h2>
+  const counts = {
+    all: users.length,
+    student: users.filter((u) => u.role === 'STUDENT').length,
+    creator: users.filter((u) => u.role === 'CREATOR').length,
+    admin: users.filter((u) => u.role === 'ADMIN').length,
+  };
+  const query = q.trim().toLowerCase();
+  const filtered = users
+    .filter((u) => (filter === 'all' ? true : u.role === filter.toUpperCase()))
+    .filter((u) => (query ? `${u.name || ''} ${u.email || ''}`.toLowerCase().includes(query) : true));
 
-      {users.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No users found.</p>
+  const thStyle = 'font-mono text-[10px] tracking-widest uppercase text-ink-faint font-normal py-4 pr-4 text-left';
+  const tdStyle = 'py-5 pr-4 align-middle';
+  const cellBorder = { borderBottom: '1px solid var(--hair)' };
+
+  return (
+    <div className="ml-screen-fade max-w-page mx-auto py-12">
+      <Kicker className="mb-4">studio · admin</Kicker>
+      <h1 className="font-serif text-[clamp(38px,5vw,56px)] leading-[1.05] text-ink tracking-tight2 mb-3">People in the garden.</h1>
+      <p className="text-[16px] text-ink-soft leading-relaxed max-w-[520px] mb-10">
+        Everyone who has joined us, and the role they play.
+      </p>
+
+      <div className="flex items-center justify-between gap-6 flex-wrap pb-4 mb-2" style={{ borderBottom: '1px solid var(--hair)' }}>
+        <div className="flex gap-6 flex-wrap">
+          {[['all', 'all'], ['student', 'students'], ['creator', 'creators'], ['admin', 'admins']].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className="text-[13px] py-1.5 inline-flex items-baseline gap-1.5"
+              style={{
+                color: filter === key ? 'var(--ink)' : 'var(--ink-soft)',
+                borderBottom: '2px solid ' + (filter === key ? 'var(--moss)' : 'transparent'),
+              }}
+            >
+              {label}
+              <span className="font-mono text-[10px] text-ink-faint">{String(counts[key]).padStart(2, '0')}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 min-w-[220px]" style={{ borderBottom: '1px solid var(--hair-strong)' }}>
+          <span className="font-mono text-[11px] text-ink-faint">search</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="name or email"
+            className="flex-1 bg-transparent outline-none py-2 text-[14px] text-ink"
+          />
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-20 text-ink-faint">
+          <Leaf size={28} strokeWidth={1} />
+          <p className="mt-3 text-[14px]">No one matches that search.</p>
         </div>
       ) : (
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                {isAdmin && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                )}
+                <th className={thStyle} style={cellBorder}>person</th>
+                <th className={thStyle} style={cellBorder}>role</th>
+                <th className={`${thStyle} text-right pr-0`} style={cellBorder}>actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((userItem) => (
-                <tr key={userItem.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {userItem.id}
+            <tbody>
+              {filtered.map((userItem) => (
+                <tr key={userItem.id}>
+                  <td className={tdStyle} style={cellBorder}>
+                    <div className="flex items-center gap-3.5">
+                      <span
+                        className="grid place-items-center rounded-full shrink-0"
+                        style={{ width: 36, height: 36, background: 'var(--moss-wash)', border: '1px solid var(--hair)', color: 'var(--moss-deep)', fontSize: 13 }}
+                      >
+                        {(userItem.name || userItem.email || '?')[0]?.toLowerCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-[14px] text-ink truncate">{userItem.name || 'unnamed'}</div>
+                        <div className="text-[12px] text-ink-faint truncate">{userItem.email || 'N/A'}</div>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {userItem.name || 'N/A'}
+                  <td className={tdStyle} style={cellBorder}>
+                    <RolePill role={userItem.role || 'STUDENT'} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {userItem.email || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      userItem.role === 'ADMIN' 
-                        ? 'bg-purple-100 text-purple-800'
-                        : userItem.role === 'CREATOR'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-indigo-100 text-indigo-800'
-                    }`}>
-                      {userItem.role || 'N/A'}
-                    </span>
-                  </td>
-                  {isAdmin && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                  <td className={`${tdStyle} pr-0`} style={cellBorder}>
+                    <div className="flex items-center justify-end gap-2 flex-wrap">
                       {userItem.role !== 'CREATOR' && userItem.role !== 'ADMIN' && (
                         <button
                           onClick={() => handleUpgradeToCreator(userItem.id)}
                           disabled={upgrading[userItem.id]}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="ml-button-ghost text-[11px] py-1.5 px-3"
                         >
-                          {upgrading[userItem.id] ? 'Upgrading...' : 'Upgrade to Creator'}
+                          {upgrading[userItem.id] ? 'upgrading…' : 'make creator'}
                         </button>
                       )}
                       <button
                         onClick={() => handleResetPassword(userItem.id)}
                         disabled={resetting[userItem.id]}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="ml-button-ghost text-[11px] py-1.5 px-3"
                       >
-                        {resetting[userItem.id] ? 'Generating link...' : 'Reset Password'}
+                        {resetting[userItem.id] ? 'generating…' : 'reset password'}
                       </button>
                       {userItem.role !== 'ADMIN' && userItem.id !== user?.id && (
                         <button
                           onClick={() => handleDeleteUser(userItem.id, userItem.email)}
                           disabled={deleting[userItem.id]}
-                          className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-[11px] text-ink-faint hover:text-ink px-1"
                         >
-                          {deleting[userItem.id] ? 'Deleting...' : 'Delete'}
+                          {deleting[userItem.id] ? 'deleting…' : 'delete'}
                         </button>
                       )}
-                    </td>
-                  )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -229,4 +247,3 @@ function Users() {
 }
 
 export default Users;
-

@@ -28,7 +28,7 @@ function renderRegister() {
 async function fillForm(user, { name = '', email = '', password = '', confirm = '' } = {}) {
   if (name) await user.type(screen.getByLabelText(/name/i), name);
   if (email) await user.type(screen.getByLabelText(/^email/i), email);
-  if (password) await user.type(screen.getByLabelText(/^password \*/i), password);
+  if (password) await user.type(screen.getByLabelText(/^password/i), password);
   if (confirm) await user.type(screen.getByLabelText(/confirm password/i), confirm);
 }
 

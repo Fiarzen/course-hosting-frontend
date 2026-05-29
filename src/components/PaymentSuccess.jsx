@@ -2,15 +2,38 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { paymentsApi } from '../api/api';
+import { Leaf, Kicker, LeafLoader } from './Leaf';
 
 const MAX_POLLS = 10;
 const POLL_INTERVAL_MS = 2000;
+
+// A small composition: a stem with all leaves filled.
+function FullStem() {
+  return (
+    <svg width="120" height="160" viewBox="0 0 120 160" style={{ overflow: 'visible' }} aria-hidden="true">
+      <line x1="60" y1="8" x2="60" y2="150" stroke="var(--moss)" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="60" cy="8" r="4" fill="var(--moss)" />
+      {[24, 50, 76, 102, 128].map((y, i) => {
+        const s = i % 2 === 0 ? -1 : 1;
+        return (
+          <g key={i}>
+            <path d={`M 60 ${y} Q ${60 + s * 8} ${y + 1} ${60 + s * 22} ${y - 6}`}
+                  stroke="var(--moss)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+            <g transform={`translate(${60 + s * 22} ${y - 6}) rotate(${s * 70}) scale(1.2)`}>
+              <path d="M0 0 C -7 -3, -10 -10, 0 -16 C 10 -10, 7 -3, 0 0 Z" fill="var(--moss)" />
+              <path d="M0 0 V -15" stroke="var(--paper-2)" strokeWidth="0.8" opacity="0.55" />
+            </g>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
 
 function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
 
-  // Stripe passes session_id; PayPal passes token (order ID) + PayerID
   const stripeSessionId = searchParams.get('session_id');
   const paypalToken = searchParams.get('token');
   const isPaypal = Boolean(paypalToken) && !stripeSessionId;
@@ -38,7 +61,6 @@ function PaymentSuccess() {
     }
 
     if (isPaypal && paypalToken) {
-      // PayPal flow: capture first, then confirm via poll
       setStatus('capturing');
       paymentsApi
         .capturePaypalOrder(paypalToken)
@@ -47,13 +69,11 @@ function PaymentSuccess() {
         })
         .catch((err) => {
           console.error('PayPal capture failed:', err);
-          // Still poll in case webhook beat us to it
           setStatus('loading');
         });
       return;
     }
 
-    // Stripe flow: poll until enrolled
     if (!courseId) return;
 
     let cancelled = false;
@@ -88,7 +108,6 @@ function PaymentSuccess() {
     };
   }, [isAuthenticated, courseId, isPaypal, paypalToken]);
 
-  // After PayPal capture resolves to 'loading', kick off a poll to confirm enrollment
   useEffect(() => {
     if (status !== 'loading' || !courseId || !isPaypal) return;
 
@@ -125,45 +144,39 @@ function PaymentSuccess() {
 
   if (status === 'capturing') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0070ba] mb-4"></div>
-        <p className="text-gray-600 text-sm">Confirming your PayPal payment…</p>
+      <div className="ml-screen-fade flex flex-col items-center justify-center min-h-[50vh]">
+        <LeafLoader label="confirming payment" />
+        <p className="text-ink-soft text-[13px] -mt-8">Confirming your PayPal payment…</p>
       </div>
     );
   }
 
   if (status === 'loading') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
-        <p className="text-gray-600 text-sm">Confirming your payment…</p>
+      <div className="ml-screen-fade flex flex-col items-center justify-center min-h-[50vh]">
+        <LeafLoader label="confirming payment" />
+        <p className="text-ink-soft text-[13px] -mt-8">Confirming your payment…</p>
       </div>
     );
   }
 
   if (status === 'enrolled') {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <div className="text-5xl mb-4">🎉</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">Payment successful!</h1>
-        <p className="text-gray-600 mb-8">
-          You are now enrolled and can start learning right away.
+      <div className="ml-screen-fade max-w-[760px] mx-auto py-24 text-center">
+        <div className="inline-block mb-9"><FullStem /></div>
+        <Kicker className="mb-5">payment received</Kicker>
+        <h1 className="font-serif text-[clamp(40px,6vw,56px)] leading-[1.05] tracking-tight2 text-ink mb-5">You're enrolled.</h1>
+        <p className="text-[17px] text-ink-soft leading-relaxed max-w-[520px] mx-auto">
+          Thank you for joining mindleaf. A receipt is on its way to your inbox. The first lesson is ready when you are.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="mt-11 flex justify-center gap-3.5 flex-wrap">
           {courseId && (
-            <Link
-              to={`/courses/${courseId}`}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded transition"
-            >
-              Go to Course
+            <Link to={`/courses/${courseId}`} className="ml-button-primary">
+              begin the course
+              <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
             </Link>
           )}
-          <Link
-            to="/profile"
-            className="border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 px-6 rounded transition"
-          >
-            My Enrolled Courses
-          </Link>
+          <Link to="/profile" className="ml-button-ghost">go to your library</Link>
         </div>
       </div>
     );
@@ -171,43 +184,33 @@ function PaymentSuccess() {
 
   if (status === 'pending') {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <div className="text-5xl mb-4">⏳</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">Payment received</h1>
-        <p className="text-gray-600 mb-8">
-          Your payment is processing. Your enrollment will be activated shortly — check your enrolled
-          courses in a moment.
+      <div className="ml-screen-fade max-w-[760px] mx-auto py-24 text-center">
+        <div className="inline-block mb-9 opacity-70"><FullStem /></div>
+        <Kicker className="mb-5 text-ink-faint normal-case">payment processing</Kicker>
+        <h1 className="font-serif text-[clamp(40px,6vw,56px)] leading-[1.05] tracking-tight2 text-ink mb-5">Almost there.</h1>
+        <p className="text-[17px] text-ink-soft leading-relaxed max-w-[520px] mx-auto">
+          Your payment is processing. Your enrollment will be activated shortly — check your library in a moment.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="mt-11 flex justify-center gap-3.5 flex-wrap">
           {courseId && (
-            <Link
-              to={`/courses/${courseId}`}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded transition"
-            >
-              View Course
-            </Link>
+            <Link to={`/courses/${courseId}`} className="ml-button-primary">view course</Link>
           )}
-          <Link
-            to="/profile"
-            className="border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 px-6 rounded transition"
-          >
-            My Enrolled Courses
-          </Link>
+          <Link to="/profile" className="ml-button-ghost">go to your library</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-16 text-center">
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">Something went wrong</h1>
-      <p className="text-gray-600 mb-8">
-        We couldn't confirm your enrollment. If you completed payment, please check your enrolled
-        courses or contact support.
+    <div className="ml-screen-fade max-w-[760px] mx-auto py-24 text-center">
+      <Kicker className="mb-5 text-ink-faint normal-case">something went wrong</Kicker>
+      <h1 className="font-serif text-[clamp(40px,6vw,56px)] leading-[1.05] tracking-tight2 text-ink mb-5">We couldn't confirm it.</h1>
+      <p className="text-[17px] text-ink-soft leading-relaxed max-w-[520px] mx-auto">
+        If you completed payment, please check your library in a moment or contact support.
       </p>
-      <Link to="/courses" className="text-emerald-600 hover:underline font-medium">
-        Back to Courses
-      </Link>
+      <div className="mt-11 flex justify-center">
+        <Link to="/courses" className="ml-button-ghost">back to catalogue</Link>
+      </div>
     </div>
   );
 }

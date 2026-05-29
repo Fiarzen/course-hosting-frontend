@@ -2,196 +2,180 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Mindleaf design tokens
+   ============================================================ */
 :root {
-  --branch-bg-from: #f9fbf7;
-  --branch-bg-to: #ecfdf3;
-  --branch-accent: #4f7c4a;
-  --branch-accent-soft: #8fb98a;
-}
-
-body {
-  margin: 0;
-  font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--branch-bg-from);
-  background-image:
-    radial-gradient(circle at 10% 20%, rgba(79, 124, 74, 0.08) 0, transparent 55%),
-    radial-gradient(circle at 90% 80%, rgba(143, 185, 138, 0.12) 0, transparent 55%),
-    linear-gradient(to bottom right, var(--branch-bg-from), var(--branch-bg-to));
-  background-attachment: fixed;
-}
-
-h1,
-.h-heading,
-.branch-heading {
-  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-
-.branch-theme {
-  min-height: 100vh;
-  background: transparent;
-  position: relative;
-}
-
-.branch-theme::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle at 15% 10%, rgba(34, 197, 94, 0.12) 0, transparent 55%),
-    radial-gradient(circle at 80% 90%, rgba(22, 163, 74, 0.14) 0, transparent 55%),
-    linear-gradient(to bottom right, transparent, rgba(148, 163, 184, 0.08));
-  mix-blend-mode: multiply;
-  opacity: 0.9;
-  z-index: -1;
-}
-
-.branch-nav {
-  background: rgba(249, 253, 247, 0.96);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-}
-
-.branch-nav__brand {
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--branch-accent);
-}
-
-.branch-pill {
-  border-radius: 9999px;
-  background: rgba(79, 124, 74, 0.1);
-  color: #1f2933;
+  --paper:        #f6f3ea;
+  --paper-2:      #efeadd;
+  --ink:          #1a1d18;
+  --ink-soft:     #4a4d44;
+  --ink-faint:    #8a8a7e;
+  --hair:         rgba(26, 29, 24, 0.10);
+  --hair-strong:  rgba(26, 29, 24, 0.22);
+  --moss:         #4a6b3f;
+  --moss-deep:    #34522c;
+  --moss-soft:    #b7c4a4;
+  --moss-wash:    #e8ecd9;
+  --gold:         #b08a3e;
 }
 
 :root.dark {
-  --branch-bg-from: #020617;
-  --branch-bg-to: #0f172a;
-  --branch-accent: #a4f9c8;
-  --branch-accent-soft: #4ade80;
+  --paper:        #11140f;
+  --paper-2:      #181c15;
+  --ink:          #e9e8df;
+  --ink-soft:     #b8b8a8;
+  --ink-faint:    #6e7166;
+  --hair:         rgba(233, 232, 223, 0.10);
+  --hair-strong:  rgba(233, 232, 223, 0.22);
+  --moss:         #9bb787;
+  --moss-deep:    #b9d0a5;
+  --moss-soft:    #3a4a32;
+  --moss-wash:    #1c2418;
+  --gold:         #d6b365;
   color-scheme: dark;
 }
 
-.dark body {
-  color: #e5e7eb;
-  background-color: var(--branch-bg-from);
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   background-image:
-    radial-gradient(circle at 10% 20%, rgba(15, 23, 42, 0.9) 0, transparent 55%),
-    radial-gradient(circle at 90% 80%, rgba(22, 163, 74, 0.25) 0, transparent 55%),
-    linear-gradient(to bottom right, var(--branch-bg-from), var(--branch-bg-to));
+    radial-gradient(circle at 12% 18%, rgba(74,107,63,0.06), transparent 40%),
+    radial-gradient(circle at 88% 82%, rgba(74,107,63,0.05), transparent 45%);
+}
+:root.dark body::before {
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(155,183,135,0.08), transparent 45%),
+    radial-gradient(circle at 88% 82%, rgba(155,183,135,0.06), transparent 50%);
 }
 
-.dark .branch-nav {
-  background: rgba(15, 23, 42, 0.96);
-  border-bottom-color: rgba(71, 85, 105, 0.8);
+#root { position: relative; z-index: 1; }
+
+::selection { background: var(--moss-soft); color: var(--ink); }
+
+/* Tiny utility for an underlined link in body copy */
+.ml-link {
+  color: var(--moss);
+  border-bottom: 1px solid color-mix(in oklab, var(--moss) 40%, transparent);
+  transition: color 180ms ease, border-color 180ms ease;
+}
+.ml-link:hover {
+  color: var(--moss-deep);
+  border-bottom-color: var(--moss);
 }
 
-.dark .branch-nav__brand {
-  color: var(--branch-accent-soft);
+/* ============================================================
+   Reusable components — kept thin so most styling is Tailwind.
+   ============================================================ */
+.ml-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in oklab, var(--paper) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--hair);
 }
 
-.dark .branch-pill {
-  background: rgba(148, 163, 184, 0.22);
-  color: #e5e7eb;
+.ml-card {
+  background: var(--paper-2);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  transition: border-color 220ms ease;
 }
+.ml-card:hover { border-color: var(--hair-strong); }
 
-/* Dark mode slider toggle */
-.theme-toggle {
-  position: relative;
+.ml-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hair-strong);
+  padding: 10px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 200ms ease;
+}
+.ml-input:focus { border-bottom-color: var(--moss); }
+.ml-input::placeholder { color: var(--ink-faint); }
+
+.ml-button-primary {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 14px 26px;
+  border-radius: 4px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
   display: inline-flex;
   align-items: center;
-  width: 44px;
-  height: 24px;
-  border-radius: 9999px;
-  border: 1px solid rgba(16, 185, 129, 0.8);
-  background: #ecfdf3;
-  padding: 2px;
+  justify-content: center;
+  gap: 10px;
+  transition: opacity 180ms ease;
   cursor: pointer;
-  transition:
-    background-color 150ms ease-in-out,
-    border-color 150ms ease-in-out;
+}
+.ml-button-primary:hover  { opacity: 0.9; }
+.ml-button-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ml-button-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 14px 22px;
+  border-radius: 4px;
+  font-size: 14px;
+  border: 1px solid var(--hair-strong);
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer;
+}
+.ml-button-ghost:hover { color: var(--ink); border-color: color-mix(in oklab, var(--ink) 30%, transparent); }
+.ml-button-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ml-kicker {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--moss);
 }
 
-.theme-toggle__thumb {
-  width: 18px;
-  height: 18px;
+.ml-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: 9999px;
-  background: #16a34a;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.4);
-  transform: translateX(0);
-  transition: transform 150ms ease-in-out, background-color 150ms ease-in-out;
+  background: var(--moss-wash);
+  color: var(--moss-deep);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border: 1px solid color-mix(in oklab, var(--moss-soft) 60%, transparent);
 }
 
-.theme-toggle--dark {
-  background: #020617;
-  border-color: rgba(74, 222, 128, 0.9);
+.ml-screen-fade { animation: ml-inkfade 360ms cubic-bezier(0.2, 0.6, 0.2, 1); }
+@keyframes ml-inkfade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.theme-toggle--dark .theme-toggle__thumb {
-  transform: translateX(18px);
-  background: #4ade80;
-}
-
-.dark .theme-toggle {
-  background: #020617;
-}
-
-.dark .theme-toggle__thumb {
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.9);
-}
-
-/* Global dark mode typography tweaks for Tailwind utility classes */
-.dark .text-gray-900,
-.dark .text-gray-800,
-.dark .text-gray-700 {
-  color: #e5e7eb;
-}
-
-.dark .text-gray-600,
-.dark .text-gray-500 {
-  color: #d1d5db;
-}
-
-.dark .text-gray-400,
-.dark .text-gray-300 {
-  color: #9ca3af;
-}
-
-/* Card and surface backgrounds */
-.dark .bg-white,
-.dark .bg-gray-50 {
-  background-color: #020617;
-}
-
-.dark .bg-gray-100 {
-  background-color: #020617;
-}
-
-.dark .bg-gray-200 {
-  background-color: #020617;
-}
-
-/* Borders and dividers on dark surfaces */
-.dark .border-gray-200,
-.dark .border-gray-300 {
-  border-color: #1f2937;
-}
-
-/* Tables and hover rows */
-.dark .hover\:bg-gray-50:hover {
-  background-color: #020617;
-}
-
-/* Nav link colors on dark background */
-.dark .branch-nav a,
-.dark .branch-nav button,
-.dark .branch-nav span {
-  color: #e5e7eb;
+/* A small leaf "breathing" loader, used in place of spinners */
+.ml-leaf-pulse { animation: ml-leaf-breathe 1600ms ease-in-out infinite; }
+@keyframes ml-leaf-breathe {
+  0%, 100% { opacity: 0.35; transform: scale(0.94); }
+  50%      { opacity: 1;    transform: scale(1.04); }
 }

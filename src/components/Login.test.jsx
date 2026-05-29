@@ -32,7 +32,7 @@ describe('Login', () => {
   it('shows error when submitting empty fields', async () => {
     renderLogin();
     // fireEvent.submit bypasses native HTML5 required-field validation so handleSubmit runs
-    const form = screen.getByRole('button', { name: /^login$/i }).closest('form');
+    const form = screen.getByRole('button', { name: /sign in/i }).closest('form');
     fireEvent.submit(form);
     expect(await screen.findByRole('alert')).toHaveTextContent('Email and password are required');
     expect(mockLogin).not.toHaveBeenCalled();
@@ -44,7 +44,7 @@ describe('Login', () => {
 
     await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'secret123');
-    await userEvent.click(screen.getByRole('button', { name: /^login$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('user@test.com', 'secret123'));
   });
@@ -55,7 +55,7 @@ describe('Login', () => {
 
     await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'secret123');
-    await userEvent.click(screen.getByRole('button', { name: /^login$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/'));
   });
@@ -66,7 +66,7 @@ describe('Login', () => {
 
     await userEvent.type(screen.getByLabelText(/email/i), 'user@test.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'wrongpass');
-    await userEvent.click(screen.getByRole('button', { name: /^login$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Wrong password');
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -79,13 +79,13 @@ describe('Login', () => {
 
     await userEvent.type(screen.getByLabelText(/email/i), 'a@b.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'pass');
-    await userEvent.click(screen.getByRole('button', { name: /^login$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(await screen.findByRole('button', { name: /logging in/i })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: /signing in/i })).toBeDisabled();
 
     resolve({ success: true });
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^login$/i })).not.toBeDisabled(),
+      expect(screen.getByRole('button', { name: /sign in/i })).not.toBeDisabled(),
     );
   });
 });

@@ -1,6 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
+import { BrandLeaf, Leaf } from './components/Leaf';
 import Home from './components/Home';
 import Courses from './components/Courses';
 import Lessons from './components/Lessons';
@@ -20,26 +21,58 @@ import VerifyEmail from './components/VerifyEmail';
 import PaymentSuccess from './components/PaymentSuccess';
 import PaymentCancel from './components/PaymentCancel';
 
+function NavLink({ to, label }) {
+  const { pathname } = useLocation();
+  const active = pathname === to || (to !== '/' && pathname.startsWith(to));
+  return (
+    <Link
+      to={to}
+      className="relative px-4 py-2 text-sm tracking-wide transition-colors"
+      style={{ color: active ? 'var(--ink)' : 'var(--ink-soft)' }}
+    >
+      {label}
+      <span
+        className="absolute left-4 right-4 bottom-1 h-px transition-colors"
+        style={{ background: active ? 'var(--moss)' : 'transparent' }}
+      />
+    </Link>
+  );
+}
+
+function ThemeToggle({ dark, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="relative h-6 w-11 rounded-full p-0 transition-colors"
+      style={{ border: '1px solid var(--hair-strong)', background: 'transparent' }}
+    >
+      <span
+        className="absolute top-[2px] grid h-[18px] w-[18px] place-items-center rounded-full transition-all"
+        style={{
+          left: dark ? 22 : 2,
+          background: dark ? 'var(--moss-deep)' : 'var(--moss)',
+        }}
+      >
+        <Leaf size={10} strokeWidth={0} tilt={dark ? 30 : -20} color="var(--paper)" />
+      </span>
+    </button>
+  );
+}
+
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
-
     const stored = window.localStorage.getItem('theme');
-    if (stored === 'dark' || stored === 'light') {
-      return stored === 'dark';
-    }
-
-    return (
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    );
+    if (stored === 'dark' || stored === 'light') return stored === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {
     const root = document.documentElement;
-
     if (isDarkMode) {
       root.classList.add('dark');
       window.localStorage.setItem('theme', 'dark');
@@ -51,159 +84,87 @@ function App() {
 
   return (
     <Router>
-      <div className="branch-theme">
-        <nav className="branch-nav shadow-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between sm:h-16">
-              <div className="flex items-center justify-between sm:justify-start gap-3">
-                <Link to="/" className="flex-shrink-0 flex items-center">
-                  <h1 className="branch-heading branch-nav__brand text-xl sm:text-2xl font-semibold">
-                    mindleaf
-                  </h1>
-                </Link>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-md p-2 text-emerald-900 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500 sm:hidden"
-                  aria-expanded={mobileNavOpen}
-                  aria-label="Toggle navigation menu"
-                  onClick={() => setMobileNavOpen((open) => !open)}
-               >
-                  <svg
-                    className="h-6 w-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                  >
-                    {mobileNavOpen ? (
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    ) : (
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"
-                      />
-                    )}
-                  </svg>
-                </button>
-                <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                  <Link
-                    to="/courses"
-                    className="border-emerald-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  >
-                    Courses
-                  </Link>
-                  {(user?.role === 'CREATOR' || user?.role === 'ADMIN') && (
-                    <Link
-                      to="/my-courses"
-                      className="border-transparent text-gray-600 hover:border-emerald-300 hover:text-emerald-800 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                    >
-                      My Courses
-                    </Link>
-                  )}
-                  {user?.role === 'ADMIN' && (
-                    <Link
-                      to="/users"
-                      className="border-transparent text-gray-600 hover:border-emerald-300 hover:text-emerald-800 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                    >
-                      Users
-                    </Link>
-                  )}
-                </div>
+      <div className="min-h-screen">
+        <nav className="ml-nav">
+          <div className="mx-auto max-w-page px-6 sm:px-10">
+            <div className="flex h-16 items-center justify-between gap-6">
+              <Link to="/" className="flex items-center gap-2.5">
+                <BrandLeaf size={15} />
+                <span className="font-serif text-[20px] tracking-tight2 text-ink">mindleaf</span>
+              </Link>
+
+              <button
+                type="button"
+                className="rounded p-2 text-ink-soft sm:hidden"
+                aria-expanded={mobileNavOpen}
+                aria-label="Toggle navigation"
+                onClick={() => setMobileNavOpen((o) => !o)}
+              >
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  {mobileNavOpen
+                    ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    : <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />}
+                </svg>
+              </button>
+
+              <div className="hidden sm:flex items-center">
+                <NavLink to="/" label="home" />
+                <NavLink to="/courses" label="courses" />
+                {isAuthenticated && <NavLink to="/profile" label="library" />}
+                {(user?.role === 'CREATOR' || user?.role === 'ADMIN') && <NavLink to="/my-courses" label="studio" />}
+                {user?.role === 'ADMIN' && <NavLink to="/users" label="people" />}
               </div>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setIsDarkMode((prev) => !prev)}
-                  className={`theme-toggle ${isDarkMode ? 'theme-toggle--dark' : ''}`}
-                  aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                  <span className="theme-toggle__thumb" aria-hidden="true" />
-                </button>
+
+              <div className="hidden sm:flex items-center gap-4">
+                <ThemeToggle dark={isDarkMode} onToggle={() => setIsDarkMode((v) => !v)} />
                 {isAuthenticated ? (
-                  <>
-                    <Link
-                      to="/profile"
-                      className="text-sm text-gray-700 hover:text-emerald-900 px-2 py-1"
-                    >
-                      {user?.name || user?.email}
-                      {user?.role && (
-                        <span
-                          className={`ml-2 px-2 py-1 text-xs branch-pill ${
-                            user.role === 'ADMIN'
-                              ? 'bg-purple-100 text-purple-800'
-                              : user.role === 'CREATOR'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-lime-100 text-lime-800'
-                          }`}
-                        >
-                          {user.role}
-                        </span>
-                      )}
+                  <div className="flex items-center gap-4">
+                    <Link to="/profile" className="flex items-center gap-2 text-sm text-ink-soft">
+                      <span className="grid h-7 w-7 place-items-center rounded-full text-xs text-moss-deep"
+                            style={{ background: 'var(--moss-wash)', border: '1px solid var(--hair)' }}>
+                        {(user?.name || user?.email || '?')[0]?.toLowerCase()}
+                      </span>
+                      {user?.name?.split(' ')[0]?.toLowerCase() || 'you'}
                     </Link>
-                    <button
-                      onClick={logout}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out"
-                    >
-                      Logout
+                    <button onClick={logout} className="text-sm text-ink-faint hover:text-ink transition-colors">
+                      sign out
                     </button>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <Link
-                      to="/login"
-                      className="text-gray-700 hover:text-emerald-900 px-4 py-2 text-sm font-medium transition duration-150 ease-in-out"
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out"
-                    >
-                      Register
+                    <Link to="/login" className="text-sm text-ink-soft">sign in</Link>
+                    <Link to="/register" className="ml-button-primary">
+                      begin
+                      <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
                     </Link>
                   </>
                 )}
               </div>
             </div>
+
             {mobileNavOpen && (
-              <div className="mt-2 space-y-1 border-t border-emerald-50 pt-2 pb-3 sm:hidden">
-                <Link
-                  to="/courses"
-                  className="block rounded-md px-3 py-2 text-base font-medium text-emerald-900 hover:bg-emerald-50"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Courses
-                </Link>
-                {(user?.role === 'CREATOR' || user?.role === 'ADMIN') && (
-                  <Link
-                    to="/my-courses"
-                    className="block rounded-md px-3 py-2 text-base font-medium text-emerald-900 hover:bg-emerald-50"
-                    onClick={() => setMobileNavOpen(false)}
-                  >
-                    My Courses
-                  </Link>
-                )}
-                {user?.role === 'ADMIN' && (
-                  <Link
-                    to="/users"
-                    className="block rounded-md px-3 py-2 text-base font-medium text-emerald-900 hover:bg-emerald-50"
-                    onClick={() => setMobileNavOpen(false)}
-                  >
-                    Users
-                  </Link>
+              <div className="border-t pb-3 pt-2 sm:hidden" style={{ borderColor: 'var(--hair)' }}>
+                <Link to="/" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">home</Link>
+                <Link to="/courses" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">courses</Link>
+                {isAuthenticated && <Link to="/profile" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">library</Link>}
+                {(user?.role === 'CREATOR' || user?.role === 'ADMIN') && <Link to="/my-courses" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">studio</Link>}
+                {user?.role === 'ADMIN' && <Link to="/users" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">people</Link>}
+                <div className="mt-2 flex items-center justify-between border-t px-3 pt-3" style={{ borderColor: 'var(--hair)' }}>
+                  <span className="text-sm text-ink-faint">{isDarkMode ? 'dark' : 'light'} mode</span>
+                  <ThemeToggle dark={isDarkMode} onToggle={() => setIsDarkMode((v) => !v)} />
+                </div>
+                {!isAuthenticated && <Link to="/login" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">sign in</Link>}
+                {isAuthenticated && (
+                  <button onClick={() => { setMobileNavOpen(false); logout(); }} className="block w-full text-left rounded px-3 py-2 text-sm text-ink-soft">
+                    sign out
+                  </button>
                 )}
               </div>
             )}
           </div>
         </nav>
 
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <main className="mx-auto max-w-page py-10 px-6 sm:px-10">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/courses" element={<Courses />} />
@@ -225,10 +186,24 @@ function App() {
             <Route path="/payment/cancel" element={<PaymentCancel />} />
           </Routes>
         </main>
+
+        <footer style={{ borderTop: '1px solid var(--hair)' }} className="mt-20 px-6 py-10 sm:px-10">
+          <div className="mx-auto flex max-w-page items-center justify-between gap-6 flex-wrap">
+            <div className="flex items-center gap-3">
+              <BrandLeaf size={13} />
+              <span className="font-serif text-base text-ink">mindleaf</span>
+              <span className="ml-3 font-mono text-[11px] tracking-widest text-ink-faint">est. 2024</span>
+            </div>
+            <div className="flex gap-7 text-sm text-ink-soft">
+              <Link to="/courses">catalogue</Link>
+              <Link to="/register">teach a course</Link>
+              <a href="mailto:hello@mindleaf.studio">contact</a>
+            </div>
+          </div>
+        </footer>
       </div>
     </Router>
   );
 }
 
 export default App;
-

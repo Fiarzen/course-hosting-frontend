@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { lessonsApi, enrollmentApi } from '../api/api';
 import { playCompletionSound } from '../utils/sound';
-import './LessonView.css';
+import { Leaf, Kicker, LeafRow, LeafLoader } from './Leaf';
 
 function LessonView() {
   const { courseId, lessonId } = useParams();
@@ -27,15 +27,12 @@ function LessonView() {
       setAccessError(null);
 
       try {
-        // Always load the ordered lessons list so we know previous/next positions.
         const list = await lessonsApi.getByCourse(parseInt(courseId));
         setLessons(list);
 
-        // Then load the full lesson content; backend will enforce enrollment/role access.
         const fullLesson = await lessonsApi.getById(parseInt(lessonId));
         setCurrentLesson(fullLesson);
 
-        // Load enrollment/progress to determine if Mark Complete should be shown
         try {
           const progress = await enrollmentApi.getCourseProgress(parseInt(courseId));
           setIsEnrolled(true);
@@ -44,7 +41,6 @@ function LessonView() {
           setCourseCompletedCount(progress.lessons.filter((p) => p.completed).length);
         } catch (progressErr) {
           if (progressErr.response?.status === 403) {
-            // Not enrolled in course
             setIsEnrolled(false);
             setIsCompleted(false);
           } else {
@@ -83,10 +79,8 @@ function LessonView() {
         idx = i;
       }
     });
-
     const prevId = idx > 0 ? lessons[idx - 1].id : null;
     const nextId = idx >= 0 && idx < lessons.length - 1 ? lessons[idx + 1].id : null;
-
     return {
       index: idx >= 0 ? idx + 1 : null,
       total: lessons.length,
@@ -95,7 +89,6 @@ function LessonView() {
     };
   }, [lessons, lessonId]);
 
-  // Helper to convert YouTube URL to embed format
   const getEmbedUrl = (url) => {
     if (!url) return null;
     if (url.includes('youtube.com/embed/')) return url;
@@ -109,25 +102,16 @@ function LessonView() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LeafLoader label="loading lesson" />;
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Error: </strong>
-        <span className="block sm:inline">{error}</span>
+      <div className="ml-card p-6 my-12 max-w-[1080px] mx-auto" role="alert">
+        <strong className="font-serif text-ink">A small pause. </strong>
+        <span className="text-ink-soft">{error}</span>
         <div className="mt-4">
-          <button
-            onClick={() => navigate(`/courses/${courseId}`)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded"
-          >
-            Back to Course
-          </button>
+          <button onClick={() => navigate(`/courses/${courseId}`)} className="ml-button-primary">back to course</button>
         </div>
       </div>
     );
@@ -135,22 +119,16 @@ function LessonView() {
 
   if (accessError) {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Access restricted: </strong>
-        <span className="block sm:inline">{accessError}</span>
-        <div className="mt-4 space-x-2">
-          <button
-            onClick={() => navigate(`/courses/${courseId}`)}
-            className="bg-gray-600 text-white px-4 py-2 rounded"
-          >
-            Back to Course
-          </button>
-          <Link
-            to="/login"
-            className="bg-indigo-600 text-white px-4 py-2 rounded"
-          >
-            Login
-          </Link>
+      <div
+        className="ml-card p-6 my-12 max-w-[1080px] mx-auto"
+        role="alert"
+        style={{ background: 'color-mix(in oklab, var(--gold) 10%, transparent)', borderColor: 'color-mix(in oklab, var(--gold) 35%, transparent)' }}
+      >
+        <strong className="font-serif text-ink">Access restricted. </strong>
+        <span className="text-ink-soft">{accessError}</span>
+        <div className="mt-4 flex gap-3 flex-wrap">
+          <button onClick={() => navigate(`/courses/${courseId}`)} className="ml-button-ghost">back to course</button>
+          <Link to="/login" className="ml-button-primary">sign in</Link>
         </div>
       </div>
     );
@@ -172,7 +150,6 @@ function LessonView() {
     } catch (err) {
       const status = err.response?.status;
       const backendMessage = err.response?.data?.error;
-
       if (status === 403 || status === 401) {
         alert(backendMessage || 'You cannot mark this lesson as complete because you are not enrolled in this course.');
       } else {
@@ -185,116 +162,123 @@ function LessonView() {
   };
 
   return (
-    <div className="lesson-view px-4 py-6 sm:px-0">
-      <div className="lesson-view__container max-w-4xl mx-auto">
-        <button
-          onClick={() => navigate(`/courses/${courseId}`)}
-          className="lesson-view__back-button text-indigo-600 hover:text-indigo-800 mb-4"
-        >
-          ← Back to Course
+    <div className="ml-screen-fade max-w-[1080px] mx-auto py-12">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-6 flex-wrap mb-8">
+        <button onClick={() => navigate(`/courses/${courseId}`)} className="text-[13px] text-ink-soft">
+          ← back to course
         </button>
-
         {isEnrolled && total > 0 && (
-          <div className="mb-4">
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
-              <span>{courseCompletedCount} / {total} lessons completed</span>
-              <span>{Math.round((courseCompletedCount / total) * 100)}%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-                style={{ width: `${(courseCompletedCount / total) * 100}%` }}
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[11px] tracking-widest text-ink-faint">
+              {courseCompletedCount}/{total}
+            </span>
+            <div className="overflow-x-auto">
+              <LeafRow
+                total={total}
+                completed={courseCompletedCount}
+                size={14}
+                gap={7}
+                onLeafClick={(i) => {
+                  const target = lessons[i];
+                  if (target) navigate(`/courses/${courseId}/lessons/${target.id}`);
+                }}
               />
             </div>
           </div>
         )}
+      </div>
 
-        <div className="lesson-view__header mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="lesson-view__title text-3xl font-bold text-gray-900 mb-1">{currentLesson.title}</h1>
-            <p className="lesson-view__meta text-sm text-gray-600">
-              Course ID: {courseId}
-              {index && total ? ` • Lesson ${index} of ${total}` : null}
-            </p>
-          </div>
-          <div className="lesson-view__nav flex space-x-2">
-            <button
-              disabled={!prevLessonId}
-              onClick={() => prevLessonId && navigate(`/courses/${courseId}/lessons/${prevLessonId}`)}
-              className={`lesson-view__nav-btn lesson-view__nav-btn--prev px-3 py-2 rounded text-sm font-medium ${
-                prevLessonId
-                  ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-              }`}
+      {/* Video panel */}
+      <div
+        className="relative w-full overflow-hidden rounded-md mb-9"
+        style={{ paddingBottom: '56.25%', background: 'var(--paper-2)', border: '1px solid var(--hair)' }}
+      >
+        {embedUrl ? (
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src={embedUrl}
+            title={currentLesson.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <div
+            className="absolute inset-0 grid place-items-center"
+            style={{ background: 'repeating-linear-gradient(135deg, var(--moss-wash) 0 2px, transparent 2px 14px)' }}
+          >
+            <span
+              className="grid place-items-center rounded-full"
+              style={{ width: 64, height: 64, border: '1px solid var(--hair-strong)', background: 'var(--paper)', color: 'var(--moss)' }}
             >
-              ← Previous
-            </button>
-            <button
-              disabled={!nextLessonId}
-              onClick={() => nextLessonId && navigate(`/courses/${courseId}/lessons/${nextLessonId}`)}
-              className={`lesson-view__nav-btn lesson-view__nav-btn--next px-3 py-2 rounded text-sm font-medium ${
-                nextLessonId
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  : 'bg-indigo-50 text-indigo-300 cursor-not-allowed'
-              }`}
-            >
-              Next →
-            </button>
+              <Leaf size={24} strokeWidth={0} tilt={-18} />
+            </span>
           </div>
-        </div>
+        )}
+      </div>
 
-        <div className="lesson-view__card bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="lesson-view__content prose max-w-none mb-4">
-            <p className="lesson-view__content-text whitespace-pre-wrap text-gray-800">{currentLesson.content || 'No content'}</p>
-          </div>
+      {/* Title + meta */}
+      <Kicker className="mb-3">
+        {index ? `lesson ${String(index).padStart(2, '0')}` : 'lesson'}{total ? ` · of ${total}` : ''}
+      </Kicker>
+      <h1 className="font-serif text-[clamp(34px,5vw,52px)] leading-[1.08] tracking-tight2 text-ink mb-8">
+        {currentLesson.title}
+      </h1>
 
+      <div className="text-[18px] leading-[1.7] text-ink-soft whitespace-pre-wrap max-w-[680px]">
+        {currentLesson.content || 'No content'}
+      </div>
+
+      {/* Footer: complete + prev/next */}
+      <div className="mt-12 pt-8 flex items-center justify-between gap-6 flex-wrap" style={{ borderTop: '1px solid var(--hair)' }}>
+        <div>
           {isAuthenticated && isEnrolled && (
-            <div className="lesson-view__status mb-4 flex items-center justify-between">
-              <div>
-                {isCompleted && (
-                  <span className="lesson-view__status-text text-green-600 text-sm font-medium">✓ Completed</span>
-                )}
-              </div>
-              {!isCompleted && (
-                <button
-                  onClick={handleCompleteLesson}
-                  disabled={completing}
-                  className="lesson-view__complete-btn bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {completing ? 'Marking...' : 'Mark as Complete'}
-                </button>
-              )}
-            </div>
+            isCompleted ? (
+              <span className="ml-pill">
+                <Leaf size={11} strokeWidth={0} /> lesson complete
+              </span>
+            ) : (
+              <button onClick={handleCompleteLesson} disabled={completing} className="ml-button-primary">
+                {completing ? 'marking…' : 'mark complete'}
+                <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
+              </button>
+            )
           )}
-
-          {embedUrl && (
-            <div className="lesson-view__video mb-4">
-              <div className="lesson-view__video-inner relative pb-[56.25%] h-0 overflow-hidden rounded">
-                <iframe
-                  className="lesson-view__video-frame absolute top-0 left-0 w-full h-full"
-                  src={embedUrl}
-                  title={currentLesson.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              </div>
-            </div>
-          )}
-
-          {currentLesson.pdfUrl && (
-            <div className="lesson-view__pdf mb-2">
-              <a
-                href={currentLesson.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="lesson-view__pdf-link inline-flex items-center text-red-600 hover:text-red-800"
-              >
-                📄 View PDF
-              </a>
-            </div>
-          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            disabled={!prevLessonId}
+            onClick={() => prevLessonId && navigate(`/courses/${courseId}/lessons/${prevLessonId}`)}
+            className="ml-button-ghost text-[13px] disabled:opacity-40"
+          >
+            ← previous
+          </button>
+          <button
+            disabled={!nextLessonId}
+            onClick={() => nextLessonId && navigate(`/courses/${courseId}/lessons/${nextLessonId}`)}
+            className="ml-button-primary text-[13px] disabled:opacity-40"
+          >
+            next →
+          </button>
         </div>
       </div>
+
+      {/* PDF notes */}
+      {currentLesson.pdfUrl && (
+        <a
+          href={currentLesson.pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center justify-between gap-4 px-5 py-4 rounded-md"
+          style={{ border: '1px solid var(--hair)', background: 'var(--paper-2)' }}
+        >
+          <span className="flex items-center gap-3 text-[14px] text-ink">
+            <Leaf size={14} strokeWidth={0} tilt={-18} color="var(--moss)" />
+            Lesson notes (PDF)
+          </span>
+          <span className="text-[13px] text-ink-soft">open pdf →</span>
+        </a>
+      )}
     </div>
   );
 }

@@ -43,10 +43,10 @@ beforeEach(() => {
 });
 
 describe('Courses', () => {
-  it('shows a loading spinner while fetching', () => {
+  it('shows a loading indicator while fetching', () => {
     mockGetAll.mockReturnValue(new Promise(() => {})); // never resolves
     renderCourses();
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('renders course titles after data loads', async () => {
@@ -67,26 +67,26 @@ describe('Courses', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to load courses');
   });
 
-  it('shows "+ Create Course" button for CREATOR role', async () => {
+  it('shows the new-course button for CREATOR role', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true, user: { role: 'CREATOR' } });
     mockGetMyCourses.mockResolvedValue([]);
     renderCourses();
-    expect(await screen.findByRole('link', { name: /create course/i })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /new course/i })).toBeInTheDocument();
   });
 
-  it('shows "+ Create Course" button for ADMIN role', async () => {
+  it('shows the new-course button for ADMIN role', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true, user: { role: 'ADMIN' } });
     mockGetMyCourses.mockResolvedValue([]);
     renderCourses();
-    expect(await screen.findByRole('link', { name: /create course/i })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /new course/i })).toBeInTheDocument();
   });
 
-  it('does NOT show "+ Create Course" for STUDENT role', async () => {
+  it('does NOT show the new-course button for STUDENT role', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true, user: { role: 'STUDENT' } });
     mockGetMyCourses.mockResolvedValue([]);
     renderCourses();
     await screen.findByText('React Basics');
-    expect(screen.queryByRole('link', { name: /create course/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /new course/i })).not.toBeInTheDocument();
   });
 
   it('shows Enroll button for authenticated non-enrolled user', async () => {
@@ -98,12 +98,12 @@ describe('Courses', () => {
     expect(enrollButtons).toHaveLength(2);
   });
 
-  it('shows "Enrolled" badge for already-enrolled courses', async () => {
+  it('shows a "tending" marker for already-enrolled courses', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true, user: { role: 'STUDENT' } });
     mockGetMyCourses.mockResolvedValue([{ course: { id: 1 } }]);
     renderCourses();
     await screen.findByText('React Basics');
-    expect(screen.getByRole('link', { name: /^enrolled$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /tending/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^enroll$/i })).toBeInTheDocument();
   });
 

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authApi } from '../api/api';
+import { Leaf, Field } from './Leaf';
+import { AuthShell } from './AuthShell';
 
 function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -30,77 +32,71 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="max-w-md mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center">Forgot password</h2>
-        <p className="text-gray-600 text-center mb-6">
-          Enter your email and we'll send you a reset link.
-        </p>
-
-        <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4">
-          {submitted ? (
-            <div className="text-center">
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-4 rounded mb-6">
-                <p className="font-medium">Check your inbox</p>
-                <p className="text-sm mt-1">
-                  If <span className="font-medium">{email}</span> is registered, a password reset
-                  link has been sent. It expires in 1 hour.
-                </p>
-              </div>
-              <Link
-                to="/login"
-                className="text-sm text-emerald-700 hover:text-emerald-900 font-medium"
-              >
-                Back to login
-              </Link>
+    <AuthShell
+      kicker="reset"
+      title={submitted ? 'Letter sent.' : 'Forgot your password?'}
+      intro={
+        submitted
+          ? "We've sent a reset link to that address. Take a breath — check your inbox when ready. It expires in 1 hour."
+          : "Tell us the email you signed up with. We'll send a quiet link to set a new one."
+      }
+      progress={submitted ? 7 : 3}
+    >
+      {submitted ? (
+        <div>
+          <div
+            className="mb-6 flex items-center gap-3.5 rounded px-6 py-5"
+            style={{
+              background: 'var(--moss-wash)',
+              border: '1px solid color-mix(in oklab, var(--moss-soft) 60%, transparent)',
+              color: 'var(--moss-deep)',
+            }}
+          >
+            <Leaf size={18} strokeWidth={0} />
+            <div className="text-[14px]">
+              A reset link is on its way to{' '}
+              <strong className="text-ink">{email || 'your inbox'}</strong>.
             </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              {error && (
-                <div
-                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4"
-                  role="alert"
-                >
-                  {error}
-                </div>
-              )}
-
-              <div className="mb-6">
-                <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  required
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-emerald-500"
-                  placeholder="Enter your email"
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Link to="/login" className="text-sm text-emerald-700 hover:text-emerald-900">
-                  Back to login
-                </Link>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Sending...' : 'Send reset link'}
-                </button>
-              </div>
-            </form>
-          )}
+          </div>
+          <Link to="/login" className="ml-button-ghost">back to sign in</Link>
         </div>
-      </div>
-    </div>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate>
+          {error && (
+            <div
+              role="alert"
+              className="mb-6 rounded px-4 py-3 text-[13px]"
+              style={{ background: 'color-mix(in oklab, var(--gold) 12%, transparent)', color: 'var(--ink)', border: '1px solid color-mix(in oklab, var(--gold) 40%, transparent)' }}
+            >
+              {error}
+            </div>
+          )}
+
+          <Field label="Email" required>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(null);
+              }}
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              disabled={loading}
+              className="ml-input"
+            />
+          </Field>
+
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <button type="submit" disabled={loading} className="ml-button-primary">
+              {loading ? 'sending…' : 'send reset link'}
+            </button>
+            <Link to="/login" className="text-[13px] text-ink-soft">back to sign in</Link>
+          </div>
+        </form>
+      )}
+    </AuthShell>
   );
 }
 
