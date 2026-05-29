@@ -15,8 +15,7 @@ function Home() {
           A quieter place<br />to learn one thing<br />at a time.
         </h1>
         <p className="mt-9 max-w-[520px] text-[17px] leading-relaxed text-ink-soft">
-          Short, slow courses for people who would rather attend to one thing properly than skim ten.
-          Made by teachers, writers, and craftspeople in a hurry to be unhurried.
+          A place to share learnings and expand the mind.
         </p>
         <div className="mt-11 flex items-center gap-6 flex-wrap">
           <Link to="/courses" className="ml-button-primary">
@@ -49,22 +48,9 @@ function Home() {
           background: 'color-mix(in oklab, var(--paper-2) 60%, transparent)',
         }}
       >
-        <div className="grid grid-cols-1 gap-14 md:grid-cols-3 max-w-page mx-auto">
-          {[
-            ['i.',   'Slow on purpose',     'Lessons are paced for the depth they ask for, not the speed you would prefer.'],
-            ['ii.',  'One thing at a time', 'Each course is a single, finishable subject. No bundles, no upsells.'],
-            ['iii.', 'Quiet by design',     'No streaks, no notifications, no leaderboards. You return because you want to.'],
-          ].map(([num, title, body]) => (
-            <div key={num}>
-              <div className="font-serif text-2xl text-moss mb-4">{num}</div>
-              <h3 className="font-serif text-[22px] text-ink mb-3 leading-tight">{title}</h3>
-              <p className="text-[14.5px] text-ink-soft leading-relaxed">{body}</p>
-            </div>
-          ))}
-        </div>
       </section>
 
-      <section className="py-24 max-w-page mx-auto">
+      {/* <section className="py-24 max-w-page mx-auto">
         <SectionHeading kicker="featured this season">A course we recommend</SectionHeading>
         <Link
           to="/courses"
@@ -103,7 +89,7 @@ function Home() {
             </div>
           </div>
         </Link>
-      </section>
+      </section> */}
     </div>
   );
 }
