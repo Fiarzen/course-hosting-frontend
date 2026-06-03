@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { coursesApi, lessonsApi, paymentsApi } from '../api/api';
+import { coursesApi, lessonsApi, paymentsApi, assessmentsApi } from '../api/api';
 import { formatPrice, CURRENCY_OPTIONS } from '../utils/pricing';
 import { Leaf, Kicker, LeafTag, LeafLoader } from './Leaf';
 
@@ -11,6 +11,8 @@ function MyCourses() {
 
   const [courses, setCourses] = useState([]);
   const [lessonsByCourse, setLessonsByCourse] = useState({});
+  const [assessmentsByCourse, setAssessmentsByCourse] = useState({});
+  const [deletingAssessment, setDeletingAssessment] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [savingOrder, setSavingOrder] = useState({});
@@ -63,6 +65,30 @@ function MyCourses() {
     } catch (err) {
       console.error('Failed to load lessons for course', courseId, err);
       alert('Failed to load lessons for this course.');
+    }
+  };
+
+  const loadAssessmentsForCourse = async (courseId) => {
+    try {
+      const data = await assessmentsApi.getByCourse(courseId);
+      setAssessmentsByCourse((prev) => ({ ...prev, [courseId]: data }));
+    } catch (err) {
+      console.error('Failed to load assessments for course', courseId, err);
+      alert('Failed to load assessments for this course.');
+    }
+  };
+
+  const handleDeleteAssessment = async (courseId, assessmentId) => {
+    if (!window.confirm('Delete this assessment? This cannot be undone.')) return;
+    setDeletingAssessment((prev) => ({ ...prev, [assessmentId]: true }));
+    try {
+      await assessmentsApi.delete(assessmentId);
+      await loadAssessmentsForCourse(courseId);
+    } catch (err) {
+      console.error('Failed to delete assessment:', err);
+      alert(err.response?.data?.error || 'Failed to delete assessment. Please try again.');
+    } finally {
+      setDeletingAssessment((prev) => ({ ...prev, [assessmentId]: false }));
     }
   };
 
@@ -296,6 +322,9 @@ function MyCourses() {
                   <button onClick={() => loadLessonsForCourse(course.id)} className="ml-button-ghost text-[12px] py-2 px-4">
                     manage lessons
                   </button>
+                  <button onClick={() => loadAssessmentsForCourse(course.id)} className="ml-button-ghost text-[12px] py-2 px-4">
+                    manage assessments
+                  </button>
                   <button
                     onClick={() => handleDeleteCourse(course.id)}
                     disabled={deletingCourse[course.id]}
@@ -432,6 +461,50 @@ function MyCourses() {
                             <button onClick={() => handleDeleteLesson(course.id, lesson.id)} disabled={deletingLesson[lesson.id]}
                               className="text-[11px] text-ink-faint hover:text-ink px-1">
                               {deletingLesson[lesson.id] ? 'deleting…' : 'delete'}
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {assessmentsByCourse[course.id] && (
+                <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--hair)' }}>
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-mono text-[10px] tracking-widest uppercase text-ink-faint">assessments</h4>
+                    <button
+                      onClick={() => navigate(`/courses/${course.id}/assessments/create`)}
+                      className="ml-button-ghost text-[12px] py-1.5 px-3"
+                    >
+                      + add assessment
+                    </button>
+                  </div>
+
+                  {assessmentsByCourse[course.id].length === 0 ? (
+                    <p className="text-ink-faint text-[14px]">No assessments yet.</p>
+                  ) : (
+                    <ul className="list-none p-0 m-0 space-y-px">
+                      {assessmentsByCourse[course.id].map((a, index) => (
+                        <li
+                          key={a.id}
+                          className="flex items-center justify-between gap-3 px-3 py-3"
+                          style={{ borderBottom: '1px solid var(--hair)' }}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="font-mono text-[11px] text-ink-faint w-8">{String(index + 1).padStart(2, '0')}</span>
+                            <span className="text-[14px] text-ink truncate">{a.title}</span>
+                            <span className="font-mono text-[11px] text-ink-faint shrink-0">{a.questions?.length || 0}q</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={() => navigate(`/courses/${course.id}/assessments/${a.id}`)}
+                              className="ml-button-ghost text-[11px] py-1 px-2">take</button>
+                            <button onClick={() => navigate(`/courses/${course.id}/assessments/${a.id}/edit`)}
+                              className="ml-button-primary text-[11px] py-1 px-2">edit</button>
+                            <button onClick={() => handleDeleteAssessment(course.id, a.id)} disabled={deletingAssessment[a.id]}
+                              className="text-[11px] text-ink-faint hover:text-ink px-1">
+                              {deletingAssessment[a.id] ? 'deleting…' : 'delete'}
                             </button>
                           </div>
                         </li>

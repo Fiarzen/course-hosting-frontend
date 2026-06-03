@@ -42,7 +42,10 @@ function RichTextEditor({ value, onChange, placeholder = 'Write the lesson…' }
       onChange(html === '<p></p>' ? '' : html);
     },
     editorProps: {
-      attributes: { 'data-placeholder': placeholder },
+      // `ml-prose` gives the editable surface the same list/heading/blockquote
+      // styling as the rendered lesson, so formatting is truly WYSIWYG.
+      // (Tailwind's preflight otherwise strips bullets/numbers and heading sizes.)
+      attributes: { class: 'ml-prose', 'data-placeholder': placeholder },
     },
   });
 
