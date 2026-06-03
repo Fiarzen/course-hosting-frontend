@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { lessonsApi, coursesApi } from '../api/api';
 import { Leaf, Kicker, Field } from './Leaf';
+import RichTextEditor from './RichTextEditor';
 
 function CreateLesson() {
   const navigate = useNavigate();
@@ -73,6 +74,11 @@ function CreateLesson() {
         setLoading(false);
         return;
       }
+      if (!formData.content.trim()) {
+        setError('Please add some lesson content.');
+        setLoading(false);
+        return;
+      }
       const videoUrl = formData.videoUrl ? convertToEmbedUrl(formData.videoUrl) : null;
       await lessonsApi.create(
         {
@@ -118,7 +124,10 @@ function CreateLesson() {
         </Field>
 
         <Field label="Content" required>
-          <textarea name="content" value={formData.content} onChange={handleChange} required rows="6" placeholder="Write the lesson…" className="ml-input resize-y" />
+          <RichTextEditor
+            value={formData.content}
+            onChange={(html) => setFormData((prev) => ({ ...prev, content: html }))}
+          />
         </Field>
 
         <Field label="Course" required>

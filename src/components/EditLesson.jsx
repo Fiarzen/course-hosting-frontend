@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { lessonsApi } from '../api/api';
 import { Leaf, Kicker, Field, LeafLoader } from './Leaf';
+import RichTextEditor from './RichTextEditor';
 
 function EditLesson() {
   const navigate = useNavigate();
@@ -126,7 +127,10 @@ function EditLesson() {
         </Field>
 
         <Field label="Content" required>
-          <textarea name="content" value={formData.content} onChange={handleChange} required rows="6" placeholder="Write the lesson…" className="ml-input resize-y" />
+          <RichTextEditor
+            value={formData.content}
+            onChange={(html) => setFormData((prev) => ({ ...prev, content: html }))}
+          />
         </Field>
 
         <Field label="YouTube video URL" hint="optional">

@@ -14,6 +14,9 @@ import Profile from './components/Profile';
 import CourseDetail from './components/CourseDetail';
 import LessonView from './components/LessonView';
 import EditLesson from './components/EditLesson';
+import AssessmentView from './components/AssessmentView';
+import CreateAssessment from './components/CreateAssessment';
+import EditAssessment from './components/EditAssessment';
 import MyCourses from './components/MyCourses';
 import ResetPassword from './components/ResetPassword';
 import ForgotPassword from './components/ForgotPassword';
@@ -171,6 +174,9 @@ function App() {
             <Route path="/courses/:courseId" element={<CourseDetail />} />
             <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonView />} />
             <Route path="/courses/:courseId/lessons/:lessonId/edit" element={<EditLesson />} />
+            <Route path="/courses/:courseId/assessments/create" element={<CreateAssessment />} />
+            <Route path="/courses/:courseId/assessments/:assessmentId" element={<AssessmentView />} />
+            <Route path="/courses/:courseId/assessments/:assessmentId/edit" element={<EditAssessment />} />
             <Route path="/lessons" element={<Lessons />} />
             <Route path="/users" element={<Users />} />
             <Route path="/login" element={<Login />} />

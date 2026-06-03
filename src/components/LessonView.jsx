@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { lessonsApi, enrollmentApi } from '../api/api';
 import { playCompletionSound } from '../utils/sound';
 import { Leaf, Kicker, LeafRow, LeafLoader } from './Leaf';
+import RichTextContent from './RichTextContent';
 
 function LessonView() {
   const { courseId, lessonId } = useParams();
@@ -225,9 +226,34 @@ function LessonView() {
         {currentLesson.title}
       </h1>
 
-      <div className="text-[18px] leading-[1.7] text-ink-soft whitespace-pre-wrap max-w-[680px]">
-        {currentLesson.content || 'No content'}
-      </div>
+      <RichTextContent html={currentLesson.content} className="max-w-[680px]" />
+
+      {/* PDF notes — embedded inline, with a fallback link below */}
+      {currentLesson.pdfUrl && (
+        <div className="mt-10">
+          <Kicker className="mb-3">lesson notes</Kicker>
+          <div
+            className="w-full overflow-hidden rounded-md"
+            style={{ border: '1px solid var(--hair)', background: 'var(--paper-2)' }}
+          >
+            <iframe
+              src={currentLesson.pdfUrl}
+              title="Lesson notes (PDF)"
+              className="w-full"
+              style={{ height: 'min(80vh, 760px)', border: 0 }}
+            />
+          </div>
+          <a
+            href={currentLesson.pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-2 text-[13px] text-ink-soft"
+          >
+            <Leaf size={13} strokeWidth={0} tilt={-18} color="var(--moss)" />
+            open pdf in a new tab →
+          </a>
+        </div>
+      )}
 
       {/* Footer: complete + prev/next */}
       <div className="mt-12 pt-8 flex items-center justify-between gap-6 flex-wrap" style={{ borderTop: '1px solid var(--hair)' }}>
@@ -262,23 +288,6 @@ function LessonView() {
           </button>
         </div>
       </div>
-
-      {/* PDF notes */}
-      {currentLesson.pdfUrl && (
-        <a
-          href={currentLesson.pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 flex items-center justify-between gap-4 px-5 py-4 rounded-md"
-          style={{ border: '1px solid var(--hair)', background: 'var(--paper-2)' }}
-        >
-          <span className="flex items-center gap-3 text-[14px] text-ink">
-            <Leaf size={14} strokeWidth={0} tilt={-18} color="var(--moss)" />
-            Lesson notes (PDF)
-          </span>
-          <span className="text-[13px] text-ink-soft">open pdf →</span>
-        </a>
-      )}
     </div>
   );
 }

@@ -103,6 +103,35 @@ export const lessonsApi = {
   },
 };
 
+// Assessments API (standalone multiple-choice self-checks, course-scoped)
+export const assessmentsApi = {
+  getByCourse: async (courseId) => {
+    const response = await api.get(`/assessments/course/${Number(courseId)}`);
+    return response.data;
+  },
+  getById: async (assessmentId) => {
+    const response = await api.get(`/assessments/${assessmentId}`);
+    return response.data;
+  },
+  create: async (payload) => {
+    // payload: { courseId, title, description?, questions: [{ prompt, choices: [{ text, isCorrect }] }] }
+    const response = await api.post('/assessments', payload);
+    return response.data;
+  },
+  update: async (assessmentId, payload) => {
+    const response = await api.put(`/assessments/${assessmentId}`, payload);
+    return response.data;
+  },
+  delete: async (assessmentId) => {
+    await api.delete(`/assessments/${assessmentId}`);
+  },
+  // Stateless self-check grader. answers: [{ questionId, choiceId }]
+  check: async (assessmentId, answers) => {
+    const response = await api.post(`/assessments/${assessmentId}/check`, { answers });
+    return response.data; // { assessmentId, score, total, results }
+  },
+};
+
 // Users API
 export const usersApi = {
   getAll: async () => {

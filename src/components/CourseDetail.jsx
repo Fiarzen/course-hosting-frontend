@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { coursesApi, lessonsApi, enrollmentApi, paymentsApi } from '../api/api';
+import { coursesApi, lessonsApi, enrollmentApi, paymentsApi, assessmentsApi } from '../api/api';
 import { formatPrice } from '../utils/pricing';
 import { playCompletionSound } from '../utils/sound';
 import { Leaf, GrowingStem, Kicker, SectionHeading, LeafTag, LeafLoader } from './Leaf';
+
+// Lesson content is now rich HTML; show a plain-text preview in the list.
+function contentPreview(content) {
+  if (!content) return 'No content';
+  const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return text || 'No content';
+}
 
 function CourseDetail() {
   const { courseId } = useParams();
@@ -12,6 +19,7 @@ function CourseDetail() {
   const { user, isAuthenticated } = useAuth();
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
+  const [assessments, setAssessments] = useState([]);
   const [lessonProgress, setLessonProgress] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,8 +38,22 @@ function CourseDetail() {
       checkEnrollment();
       loadProgress();
       loadPaymentStatus();
+      loadAssessments();
     }
   }, [courseId, isAuthenticated]);
+
+  const loadAssessments = async () => {
+    try {
+      const id = parseInt(courseId, 10);
+      if (Number.isNaN(id)) return;
+      const data = await assessmentsApi.getByCourse(id);
+      setAssessments(data);
+    } catch (err) {
+      // 403 (not enrolled) / 404 are expected for some viewers — show nothing.
+      if (![400, 403, 404].includes(err.response?.status)) console.error(err);
+      setAssessments([]);
+    }
+  };
 
   const loadCourse = async () => {
     try {
@@ -126,6 +148,17 @@ function CourseDetail() {
       await loadProgress();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to mark lesson complete.');
+      console.error(err);
+    }
+  };
+
+  const handleDeleteAssessment = async (assessmentId) => {
+    if (!window.confirm('Delete this assessment? This cannot be undone.')) return;
+    try {
+      await assessmentsApi.delete(assessmentId);
+      setAssessments((prev) => prev.filter((a) => a.id !== assessmentId));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete assessment.');
       console.error(err);
     }
   };
@@ -265,7 +298,7 @@ function CourseDetail() {
                       <div>
                         <h4 className="font-serif text-[22px] text-ink leading-tight mb-1.5">{lesson.title}</h4>
                         {canViewContent ? (
-                          <p className="m-0 text-[14px] text-ink-soft leading-relaxed max-w-[620px]">{lesson.content || 'No content'}</p>
+                          <p className="m-0 text-[14px] text-ink-soft leading-relaxed max-w-[620px] line-clamp-2">{contentPreview(lesson.content)}</p>
                         ) : (
                           <p className="m-0 text-[13px] text-ink-faint">
                             {isPaid && !isEnrolled ? 'Purchase this course to view the full content.' : 'Enroll to view the full content.'}
@@ -308,6 +341,59 @@ function CourseDetail() {
           )}
         </div>
       </div>
+
+      {(isAuthenticated && (isEnrolled || isAuthorOrAdmin)) && (
+        <section className="mt-16 pt-12" style={{ borderTop: '1px solid var(--hair)' }}>
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-2">
+            <SectionHeading kicker="self-check">Assessments</SectionHeading>
+            {isAuthorOrAdmin && (
+              <button onClick={() => navigate(`/courses/${courseId}/assessments/create`)} className="ml-button-ghost">
+                + add assessment
+              </button>
+            )}
+          </div>
+
+          {assessments.length === 0 ? (
+            <p className="text-ink-faint">
+              {isAuthorOrAdmin ? 'No assessments yet — add one to let students self-check.' : 'No assessments for this course yet.'}
+            </p>
+          ) : (
+            <ul className="list-none p-0 m-0">
+              {assessments.map((a, i) => (
+                <li key={a.id} style={{
+                  borderTop: i === 0 ? '1px solid var(--hair)' : 'none',
+                  borderBottom: '1px solid var(--hair)',
+                }}>
+                  <div className="flex items-center justify-between gap-6 py-6 flex-wrap">
+                    <div>
+                      <h4 className="font-serif text-[22px] text-ink leading-tight">{a.title}</h4>
+                      <p className="m-0 mt-1 text-[13px] text-ink-faint">
+                        {a.questions?.length || 0} question{(a.questions?.length || 0) === 1 ? '' : 's'}
+                        {a.description ? ` · ${a.description}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => navigate(`/courses/${courseId}/assessments/${a.id}`)}
+                        className="ml-button-primary text-[13px]"
+                      >
+                        take self-check
+                        <Leaf size={12} strokeWidth={0} color="var(--moss-soft)" tilt={-20} />
+                      </button>
+                      {isAuthorOrAdmin && (
+                        <>
+                          <button onClick={() => navigate(`/courses/${courseId}/assessments/${a.id}/edit`)} className="text-[12px] text-ink-soft">edit</button>
+                          <button onClick={() => handleDeleteAssessment(a.id)} className="text-[12px] text-ink-faint hover:text-ink">delete</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </div>
   );
 }
