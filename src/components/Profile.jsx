@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { enrollmentApi, authApi } from '../api/api';
 import { formatPrice } from '../utils/pricing';
-import { Leaf, Kicker, SectionHeading, LeafTag, LeafRow, LeafLoader } from './Leaf';
+import { Leaf, Kicker, SectionHeading, LeafTag, LeafRow, LeafLoader, Field } from './Leaf';
 
 function Stat({ label, value }) {
   return (
@@ -15,7 +15,7 @@ function Stat({ label, value }) {
 }
 
 function Profile() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, changePassword } = useAuth();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +26,9 @@ function Profile() {
   const [unenrolling, setUnenrolling] = useState({});
   const [resendingVerification, setResendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState(null);
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMessage, setPwMessage] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -46,6 +49,35 @@ function Profile() {
       setVerificationMessage({ type: 'error', text: msg });
     } finally {
       setResendingVerification(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwMessage(null);
+
+    if (!pwForm.current || !pwForm.next || !pwForm.confirm) {
+      setPwMessage({ type: 'error', text: 'Please fill in all password fields.' });
+      return;
+    }
+    if (pwForm.next.length < 6) {
+      setPwMessage({ type: 'error', text: 'New password must be at least 6 characters.' });
+      return;
+    }
+    if (pwForm.next !== pwForm.confirm) {
+      setPwMessage({ type: 'error', text: 'New passwords do not match.' });
+      return;
+    }
+
+    setPwSaving(true);
+    const result = await changePassword(pwForm.current, pwForm.next);
+    setPwSaving(false);
+
+    if (result.success) {
+      setPwMessage({ type: 'success', text: 'Password changed successfully.' });
+      setPwForm({ current: '', next: '', confirm: '' });
+    } else {
+      setPwMessage({ type: 'error', text: result.error });
     }
   };
 
@@ -275,6 +307,69 @@ function Profile() {
           )}
         </>
       )}
+
+      {/* Change password */}
+      <section className="pt-14 pb-6">
+        <SectionHeading kicker="security">Change password</SectionHeading>
+        <form onSubmit={handleChangePassword} noValidate className="max-w-md">
+          {pwMessage && (
+            <div
+              role="alert"
+              className="mb-5 rounded px-4 py-3 text-[13px]"
+              style={
+                pwMessage.type === 'success'
+                  ? { background: 'var(--moss-wash)', color: 'var(--moss-deep)', border: '1px solid color-mix(in oklab, var(--moss-soft) 60%, transparent)' }
+                  : { background: 'color-mix(in oklab, var(--gold) 12%, transparent)', color: 'var(--ink)', border: '1px solid color-mix(in oklab, var(--gold) 40%, transparent)' }
+              }
+            >
+              {pwMessage.text}
+            </div>
+          )}
+
+          <Field label="Current password" required>
+            <input
+              type="password"
+              value={pwForm.current}
+              onChange={(e) => setPwForm((p) => ({ ...p, current: e.target.value }))}
+              disabled={pwSaving}
+              required
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className="ml-input"
+            />
+          </Field>
+
+          <Field label="New password" hint="at least 6 characters" required>
+            <input
+              type="password"
+              value={pwForm.next}
+              onChange={(e) => setPwForm((p) => ({ ...p, next: e.target.value }))}
+              disabled={pwSaving}
+              required
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="ml-input"
+            />
+          </Field>
+
+          <Field label="Confirm new password" required>
+            <input
+              type="password"
+              value={pwForm.confirm}
+              onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))}
+              disabled={pwSaving}
+              required
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className="ml-input"
+            />
+          </Field>
+
+          <button type="submit" disabled={pwSaving} className="ml-button-primary mt-2">
+            {pwSaving ? 'saving…' : 'change password'}
+          </button>
+        </form>
+      </section>
 
       {/* Course Progress Modal */}
       {selectedCourse && (

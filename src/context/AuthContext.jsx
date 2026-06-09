@@ -53,6 +53,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      const { token } = await authApi.changePassword(currentPassword, newPassword);
+
+      // The backend rotates the token on a password change (invalidating other
+      // sessions). Persist the fresh token so this session stays signed in.
+      if (token) {
+        const stored = localStorage.getItem('auth_data');
+        const parsed = stored ? JSON.parse(stored) : {};
+        localStorage.setItem('auth_data', JSON.stringify({ ...parsed, token, user: parsed.user ?? user }));
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to change password',
+      };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('auth_data');
     delete api.defaults.headers.common['Authorization'];
@@ -78,6 +100,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    changePassword,
     refreshUser,
     isAuthenticated: !!user,
   };

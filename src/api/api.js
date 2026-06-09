@@ -186,6 +186,11 @@ export const authApi = {
     const response = await api.post('/auth/resend-verification');
     return response.data; // { message }
   },
+  // Change password while signed in (requires auth). Returns a fresh token.
+  changePassword: async (currentPassword, newPassword) => {
+    const response = await api.post('/auth/change-password', { currentPassword, newPassword });
+    return response.data; // { message, token }
+  },
 };
 
 // Enrollment API
