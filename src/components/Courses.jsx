@@ -223,7 +223,7 @@ function Courses() {
       <section className="py-16">
         <div className="flex items-end justify-between gap-6 flex-wrap mb-2">
           <div>
-            <Kicker className="mb-4">catalogue · spring 2026</Kicker>
+            <Kicker className="mb-4">catalogue</Kicker>
             <h1 className="font-serif text-[clamp(40px,5vw,64px)] leading-tight text-ink tracking-tight2 max-w-[720px]">
               Our available courses.
             </h1>
