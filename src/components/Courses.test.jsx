@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Courses from './Courses';
+import Courses, { courseMatchesFilters } from './Courses';
 
 const mockGetAll = vi.fn();
 const mockGetMyCourses = vi.fn();
@@ -111,5 +111,91 @@ describe('Courses', () => {
     renderCourses();
     await screen.findByText('React Basics');
     expect(screen.queryByRole('button', { name: /enroll/i })).not.toBeInTheDocument();
+  });
+
+  it('filters courses by search text', async () => {
+    renderCourses();
+    await screen.findByText('React Basics');
+    await userEvent.type(screen.getByLabelText(/search courses/i), 'node');
+    expect(screen.queryByText('React Basics')).not.toBeInTheDocument();
+    expect(screen.getByText('Node Deep Dive')).toBeInTheDocument();
+  });
+
+  it('suggests clearing filters when search matches nothing', async () => {
+    renderCourses();
+    await screen.findByText('React Basics');
+    await userEvent.type(screen.getByLabelText(/search courses/i), 'zzzz');
+    expect(screen.getByText(/nothing matches your search or filters/i)).toBeInTheDocument();
+  });
+
+  it('filters courses by lesson-count bucket', async () => {
+    mockGetAll.mockResolvedValue([
+      { id: 1, title: 'Short Course', description: '', lessonCount: 2 },
+      { id: 2, title: 'Long Course', description: '', lessonCount: 12 },
+    ]);
+    renderCourses();
+    await screen.findByText('Short Course');
+    await userEvent.click(screen.getByRole('button', { name: /long/i }));
+    expect(screen.queryByText('Short Course')).not.toBeInTheDocument();
+    expect(screen.getByText('Long Course')).toBeInTheDocument();
+  });
+});
+
+describe('courseMatchesFilters', () => {
+  const course = {
+    title: 'Gentle Botany',
+    description: 'Leaves and stems, slowly.',
+    isPaid: false,
+    lessonCount: 5,
+  };
+
+  it('matches everything with default options', () => {
+    expect(courseMatchesFilters(course)).toBe(true);
+    expect(courseMatchesFilters(course, {})).toBe(true);
+  });
+
+  it('matches search against title, case-insensitively', () => {
+    expect(courseMatchesFilters(course, { search: 'BOTANY' })).toBe(true);
+    expect(courseMatchesFilters(course, { search: '  botany ' })).toBe(true);
+  });
+
+  it('matches search against description', () => {
+    expect(courseMatchesFilters(course, { search: 'stems' })).toBe(true);
+  });
+
+  it('rejects search text found in neither field', () => {
+    expect(courseMatchesFilters(course, { search: 'rust' })).toBe(false);
+  });
+
+  it('tolerates missing title and description', () => {
+    expect(courseMatchesFilters({}, { search: 'anything' })).toBe(false);
+    expect(courseMatchesFilters({}, { search: '' })).toBe(true);
+  });
+
+  it('applies the free/paid filter', () => {
+    expect(courseMatchesFilters(course, { filter: 'free' })).toBe(true);
+    expect(courseMatchesFilters(course, { filter: 'paid' })).toBe(false);
+    expect(courseMatchesFilters({ ...course, isPaid: true }, { filter: 'paid' })).toBe(true);
+    expect(courseMatchesFilters({ ...course, isPaid: true }, { filter: 'free' })).toBe(false);
+  });
+
+  it('applies length buckets from lessons array or lessonCount', () => {
+    expect(courseMatchesFilters({ lessons: [1, 2] }, { lengthFilter: 'short' })).toBe(true);
+    expect(courseMatchesFilters({ lessonCount: 3 }, { lengthFilter: 'short' })).toBe(true);
+    expect(courseMatchesFilters({ lessonCount: 4 }, { lengthFilter: 'short' })).toBe(false);
+    expect(courseMatchesFilters({ lessonCount: 4 }, { lengthFilter: 'medium' })).toBe(true);
+    expect(courseMatchesFilters({ lessonCount: 8 }, { lengthFilter: 'medium' })).toBe(true);
+    expect(courseMatchesFilters({ lessonCount: 9 }, { lengthFilter: 'long' })).toBe(true);
+    expect(courseMatchesFilters({ lessonCount: 8 }, { lengthFilter: 'long' })).toBe(false);
+  });
+
+  it('excludes courses with no lessons from sized buckets but not from any', () => {
+    expect(courseMatchesFilters({}, { lengthFilter: 'short' })).toBe(false);
+    expect(courseMatchesFilters({}, { lengthFilter: 'any' })).toBe(true);
+  });
+
+  it('combines search, payment, and length filters', () => {
+    expect(courseMatchesFilters(course, { filter: 'free', search: 'gentle', lengthFilter: 'medium' })).toBe(true);
+    expect(courseMatchesFilters(course, { filter: 'free', search: 'gentle', lengthFilter: 'long' })).toBe(false);
   });
 });

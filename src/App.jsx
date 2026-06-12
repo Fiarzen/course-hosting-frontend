@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
-import { BrandLeaf, Leaf } from './components/Leaf';
+import { useLeavesCollected } from './context/LeavesCollectedContext';
+import { BrandLeaf, Leaf, MilestoneCelebration } from './components/Leaf';
 import Home from './components/Home';
 import Courses from './components/Courses';
 import Lessons from './components/Lessons';
@@ -73,8 +74,20 @@ function ThemeToggle({ dark, onToggle }) {
   );
 }
 
+function LeavesBadge() {
+  const { isAuthenticated } = useAuth();
+  const { leavesCollected } = useLeavesCollected();
+  if (!isAuthenticated || leavesCollected <= 0) return null;
+  return (
+    <span className="ml-pill" title={`${leavesCollected} leaves collected`}>
+      <Leaf size={10} strokeWidth={0} /> {leavesCollected}
+    </span>
+  );
+}
+
 function App() {
   const { user, logout, isAuthenticated } = useAuth();
+  const { celebratingMilestone, dismissCelebration } = useLeavesCollected();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -132,6 +145,7 @@ function App() {
                 <ThemeToggle dark={isDarkMode} onToggle={() => setIsDarkMode((v) => !v)} />
                 {isAuthenticated ? (
                   <div className="flex items-center gap-4">
+                    <LeavesBadge />
                     <Link to="/profile" className="flex items-center gap-2 text-sm text-ink-soft">
                       <span className="grid h-7 w-7 place-items-center rounded-full text-xs text-moss-deep"
                             style={{ background: 'var(--moss-wash)', border: '1px solid var(--hair)' }}>
@@ -173,9 +187,12 @@ function App() {
                   </>
                 )}
                 {isAuthenticated && (
-                  <button onClick={() => { setMobileNavOpen(false); logout(); }} className="block w-full text-left rounded px-3 py-2 text-sm text-ink-soft">
-                    sign out
-                  </button>
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => { setMobileNavOpen(false); logout(); }} className="block rounded px-3 py-2 text-sm text-ink-soft">
+                      sign out
+                    </button>
+                    <LeavesBadge />
+                  </div>
                 )}
               </div>
             )}
@@ -207,6 +224,8 @@ function App() {
             <Route path="/payment/cancel" element={<PaymentCancel />} />
           </Routes>
         </main>
+
+        <MilestoneCelebration milestone={celebratingMilestone} onDismiss={dismissCelebration} />
 
         <footer style={{ borderTop: '1px solid var(--hair)' }} className="mt-20 px-6 py-10 sm:px-10">
           <div className="mx-auto flex max-w-page items-center justify-between gap-6 flex-wrap">

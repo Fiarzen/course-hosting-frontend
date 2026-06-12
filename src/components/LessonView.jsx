@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLeavesCollected } from '../context/LeavesCollectedContext';
 import { lessonsApi, enrollmentApi } from '../api/api';
 import { playCompletionSound } from '../utils/sound';
 import { Leaf, Kicker, LeafRow, LeafLoader } from './Leaf';
@@ -10,6 +11,7 @@ function LessonView() {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { refresh: refreshLeaves } = useLeavesCollected();
 
   const [lessons, setLessons] = useState([]);
   const [currentLesson, setCurrentLesson] = useState(null);
@@ -148,6 +150,7 @@ function LessonView() {
       setIsCompleted(true);
       setCourseCompletedCount((prev) => prev + 1);
       playCompletionSound();
+      refreshLeaves();
     } catch (err) {
       const status = err.response?.status;
       const backendMessage = err.response?.data?.error;

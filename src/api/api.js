@@ -38,6 +38,11 @@ export const coursesApi = {
   delete: async (courseId) => {
     await api.delete(`/courses/${courseId}`);
   },
+  // Admin: toggle whether a course is featured on the home page
+  setFeatured: async (courseId, featured) => {
+    const response = await api.put(`/courses/${courseId}/featured`, { featured });
+    return response.data; // { courseId, featured }
+  },
 };
 
 // Lessons API

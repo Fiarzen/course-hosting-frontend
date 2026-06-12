@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { coursesApi, enrollmentApi, paymentsApi } from "../api/api";
 import { formatPrice } from "../utils/pricing";
-import { Leaf, Kicker, LeafLoader } from "./Leaf";
+import { Leaf, Kicker, LeafTag, LeafLoader } from "./Leaf";
 
-function CourseCard({ course, isEnrolled, isAuthenticated, onEnroll, onBuyCard, onBuyPaypal, enrolling, checkingOut, payingWithPaypal }) {
+function CourseCard({ course, isEnrolled, isAuthenticated, isAdmin, onEnroll, onBuyCard, onBuyPaypal, onToggleFeatured, enrolling, checkingOut, payingWithPaypal, togglingFeatured }) {
   const isPaid = course.isPaid;
   const priceLabel = isPaid ? formatPrice(course.priceCents, course.currency) : "Free";
 
@@ -16,9 +16,12 @@ function CourseCard({ course, isEnrolled, isAuthenticated, onEnroll, onBuyCard, 
       </span>
 
       <header>
-        <Kicker className="mb-3.5 text-ink-faint normal-case tracking-widest">
-          {course.lessons?.length || course.lessonCount || "—"} lessons
-        </Kicker>
+        <div className="mb-3.5 flex items-center gap-2.5">
+          <Kicker className="text-ink-faint normal-case tracking-widest">
+            {course.lessons?.length || course.lessonCount || "—"} lessons
+          </Kicker>
+          {course.featured && <LeafTag>featured</LeafTag>}
+        </div>
         <Link to={`/courses/${course.id}`} className="block">
           <h3 className="font-serif text-[26px] leading-tight text-ink mb-2.5 max-w-[85%]">
             {course.title}
@@ -36,6 +39,15 @@ function CourseCard({ course, isEnrolled, isAuthenticated, onEnroll, onBuyCard, 
               <span className="text-[13px] text-ink">{course.author.name || course.author.email}</span>
               <span className="text-[11.5px] text-ink-faint">author</span>
             </>
+          )}
+          {isAdmin && (
+            <button
+              onClick={(e) => { e.preventDefault(); onToggleFeatured(course.id, !course.featured); }}
+              disabled={togglingFeatured[course.id]}
+              className="mt-1 text-left text-[11px] text-ink-faint hover:text-ink"
+            >
+              {togglingFeatured[course.id] ? "saving…" : course.featured ? "unfeature" : "feature on home"}
+            </button>
           )}
         </div>
         <div className="flex items-center gap-3.5">
@@ -78,6 +90,28 @@ function CourseCard({ course, isEnrolled, isAuthenticated, onEnroll, onBuyCard, 
   );
 }
 
+const lessonCountOf = (course) => course.lessons?.length || course.lessonCount || 0;
+
+const LENGTH_BUCKETS = {
+  any: () => true,
+  short: (n) => n >= 1 && n <= 3,
+  medium: (n) => n >= 4 && n <= 8,
+  long: (n) => n >= 9,
+};
+
+export function courseMatchesFilters(course, { filter = "all", search = "", lengthFilter = "any" } = {}) {
+  if (filter === "free" && course.isPaid) return false;
+  if (filter === "paid" && !course.isPaid) return false;
+  if (!(LENGTH_BUCKETS[lengthFilter] || LENGTH_BUCKETS.any)(lessonCountOf(course))) return false;
+  const q = search.trim().toLowerCase();
+  if (q) {
+    const title = (course.title || "").toLowerCase();
+    const description = (course.description || "").toLowerCase();
+    if (!title.includes(q) && !description.includes(q)) return false;
+  }
+  return true;
+}
+
 function Courses() {
   const { isAuthenticated, user } = useAuth();
   const [courses, setCourses] = useState([]);
@@ -87,9 +121,13 @@ function Courses() {
   const [enrolling, setEnrolling] = useState({});
   const [checkingOut, setCheckingOut] = useState({});
   const [payingWithPaypal, setPayingWithPaypal] = useState({});
+  const [togglingFeatured, setTogglingFeatured] = useState({});
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [lengthFilter, setLengthFilter] = useState("any");
 
   const canCreateCourse = user?.role === "CREATOR" || user?.role === "ADMIN";
+  const isAdmin = user?.role === "ADMIN";
 
   useEffect(() => {
     loadCourses();
@@ -141,6 +179,21 @@ function Courses() {
       console.error(err);
     } finally {
       setEnrolling((prev) => ({ ...prev, [courseId]: false }));
+    }
+  };
+
+  const handleToggleFeatured = async (courseId, featured) => {
+    setTogglingFeatured((prev) => ({ ...prev, [courseId]: true }));
+    try {
+      const updated = await coursesApi.setFeatured(courseId, featured);
+      setCourses((prev) =>
+        prev.map((c) => (c.id === courseId ? { ...c, featured: updated.featured } : c))
+      );
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update featured status. Please try again.");
+      console.error(err);
+    } finally {
+      setTogglingFeatured((prev) => ({ ...prev, [courseId]: false }));
     }
   };
 
@@ -212,11 +265,13 @@ function Courses() {
     { key: "free", label: "free", count: courses.filter((c) => !c.isPaid).length },
     { key: "paid", label: "studio", count: courses.filter((c) => c.isPaid).length },
   ];
-  const filtered = courses.filter((c) => {
-    if (filter === "free") return !c.isPaid;
-    if (filter === "paid") return c.isPaid;
-    return true;
-  });
+  const lengthFilters = [
+    { key: "any", label: "any length", hint: null },
+    { key: "short", label: "short", hint: "1–3" },
+    { key: "medium", label: "medium", hint: "4–8" },
+    { key: "long", label: "long", hint: "9+" },
+  ];
+  const filtered = courses.filter((c) => courseMatchesFilters(c, { filter, search, lengthFilter }));
 
   return (
     <div className="ml-screen-fade">
@@ -241,22 +296,52 @@ function Courses() {
       </section>
 
       <section className="py-2" style={{ borderTop: "1px solid var(--hair)", borderBottom: "1px solid var(--hair)" }}>
-        <div className="flex items-baseline gap-6 py-3 flex-wrap">
-          {filters.map((f, i) => {
-            const active = filter === f.key;
+        <div className="flex items-center gap-6 py-3 flex-wrap">
+          <div className="flex items-baseline gap-6 flex-wrap">
+            {filters.map((f, i) => {
+              const active = filter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className="flex items-baseline gap-2 py-2 pr-6 text-[14px]"
+                  style={{
+                    color: active ? "var(--ink)" : "var(--ink-soft)",
+                    borderRight: i < filters.length - 1 ? "1px solid var(--hair)" : "none",
+                  }}
+                >
+                  {active && <Leaf size={10} strokeWidth={0} tilt={-20} />}
+                  <span>{f.label}</span>
+                  <span className="font-mono text-[11px] text-ink-faint">{String(f.count).padStart(2, "0")}</span>
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="search courses…"
+            aria-label="search courses"
+            className="ml-input flex-1 min-w-[180px] sm:max-w-[260px]"
+          />
+        </div>
+        <div className="flex items-baseline gap-6 pb-3 flex-wrap" style={{ borderTop: "1px solid var(--hair)" }}>
+          {lengthFilters.map((f, i) => {
+            const active = lengthFilter === f.key;
             return (
               <button
                 key={f.key}
-                onClick={() => setFilter(f.key)}
+                onClick={() => setLengthFilter(f.key)}
                 className="flex items-baseline gap-2 py-2 pr-6 text-[14px]"
                 style={{
                   color: active ? "var(--ink)" : "var(--ink-soft)",
-                  borderRight: i < filters.length - 1 ? "1px solid var(--hair)" : "none",
+                  borderRight: i < lengthFilters.length - 1 ? "1px solid var(--hair)" : "none",
                 }}
               >
                 {active && <Leaf size={10} strokeWidth={0} tilt={-20} />}
                 <span>{f.label}</span>
-                <span className="font-mono text-[11px] text-ink-faint">{String(f.count).padStart(2, "0")}</span>
+                {f.hint && <span className="font-mono text-[11px] text-ink-faint">{f.hint} lessons</span>}
               </button>
             );
           })}
@@ -266,7 +351,11 @@ function Courses() {
       {filtered.length === 0 ? (
         <div className="text-center py-20 text-ink-faint">
           <Leaf size={40} strokeWidth={1} />
-          <p className="mt-4 text-sm">No courses found. Try another filter, or check back soon.</p>
+          <p className="mt-4 text-sm">
+            {courses.length > 0
+              ? "Nothing matches your search or filters. Try clearing them."
+              : "No courses found. Try another filter, or check back soon."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3 py-12">
@@ -276,12 +365,15 @@ function Courses() {
               course={course}
               isEnrolled={enrolledCourseIds.has(course.id)}
               isAuthenticated={isAuthenticated}
+              isAdmin={isAdmin}
               onEnroll={handleEnroll}
               onBuyCard={handleBuyNow}
               onBuyPaypal={handlePayPal}
+              onToggleFeatured={handleToggleFeatured}
               enrolling={enrolling}
               checkingOut={checkingOut}
               payingWithPaypal={payingWithPaypal}
+              togglingFeatured={togglingFeatured}
             />
           ))}
         </div>

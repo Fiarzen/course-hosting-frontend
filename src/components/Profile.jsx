@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLeavesCollected } from '../context/LeavesCollectedContext';
 import { enrollmentApi, authApi } from '../api/api';
 import { formatPrice } from '../utils/pricing';
 import { Leaf, Kicker, SectionHeading, LeafTag, LeafRow, LeafLoader, Field } from './Leaf';
@@ -16,6 +17,7 @@ function Stat({ label, value }) {
 
 function Profile() {
   const { user, isAuthenticated, changePassword } = useAuth();
+  const { leavesCollected, refresh: refreshLeaves } = useLeavesCollected();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +113,7 @@ function Profile() {
   const handleCompleteLesson = async (lessonId) => {
     try {
       await enrollmentApi.completeLesson(lessonId);
+      refreshLeaves();
       if (selectedCourse) {
         const progress = await enrollmentApi.getCourseProgress(selectedCourse.course.id);
         setCourseProgress(progress);
@@ -149,7 +152,6 @@ function Profile() {
     return <LeafLoader label="loading your library" />;
   }
 
-  const totalLeaves = enrolledCourses.reduce((s, e) => s + (e.completedLessons || 0), 0);
   const tending = enrolledCourses.filter((e) => (e.completedLessons || 0) < (e.totalLessons || 0));
   const finished = enrolledCourses.filter((e) => (e.totalLessons || 0) > 0 && (e.completedLessons || 0) === (e.totalLessons || 0));
   const readingMinutes = enrolledCourses.reduce((s, e) => s + (e.completedLessons || 0) * 6, 0);
@@ -202,7 +204,7 @@ function Profile() {
 
       {/* Stats */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-8 py-10" style={{ borderBottom: '1px solid var(--hair)' }}>
-        <Stat label="leaves unfurled" value={String(totalLeaves)} />
+        <Stat label="leaves unfurled" value={String(leavesCollected)} />
         <Stat label="courses tending" value={String(tending.length)} />
         <Stat label="courses finished" value={String(finished.length)} />
         <Stat label="reading minutes" value={String(readingMinutes)} />

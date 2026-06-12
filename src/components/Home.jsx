@@ -1,24 +1,89 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Leaf, Kicker } from './Leaf';
+import { coursesApi } from '../api/api';
+import { formatPrice } from '../utils/pricing';
+import { Leaf, Kicker, SectionHeading } from './Leaf';
+import ContinueLearning from './ContinueLearning';
 
-const PRINCIPLES = [
-  {
-    n: '01',
-    title: 'One thing at a time',
-    body: 'Each course is a single path of lessons, taken in order. No feeds, no dashboards calling for your attention.',
-  },
-  {
-    n: '02',
-    title: 'Progress that grows',
-    body: 'Finish a lesson and a leaf unfurls along the stem. Your progress is something you tend, not a number you chase.',
-  },
-  {
-    n: '03',
-    title: 'Quiet by design',
-    body: 'No streaks, no leaderboards, no recommendation engine. Just the course, the work, and the time you give it.',
-  },
-];
+// Featured courses first; if none are featured, fall back to the most
+// recently created (ids are sequential, so highest id = newest).
+export function selectFeaturedCourses(courses, limit = 3) {
+  const featured = courses.filter((c) => c.featured);
+  if (featured.length > 0) return featured.slice(0, limit);
+  return [...courses].sort((a, b) => b.id - a.id).slice(0, limit);
+}
+
+function FeaturedCourses() {
+  const [courses, setCourses] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    coursesApi
+      .getAll()
+      .then((data) => { if (!cancelled) setCourses(data); })
+      .catch((err) => {
+        console.error('Failed to load featured courses:', err);
+        if (!cancelled) setCourses([]);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!courses || courses.length === 0) return null;
+
+  const anyFeatured = courses.some((c) => c.featured);
+  const picks = selectFeaturedCourses(courses);
+
+  return (
+    <section
+      className="py-16 sm:py-20"
+      style={{
+        borderTop: '1px solid var(--hair)',
+        borderBottom: '1px solid var(--hair)',
+        background: 'color-mix(in oklab, var(--paper-2) 60%, transparent)',
+      }}
+    >
+      <div className="flex items-end justify-between gap-6 flex-wrap">
+        <SectionHeading kicker={anyFeatured ? 'featured courses' : 'recently planted'}>
+          {anyFeatured ? 'A few worth your time.' : 'The latest from the catalogue.'}
+        </SectionHeading>
+        <Link
+          to="/courses"
+          className="mb-7 pb-1 text-sm text-ink-soft"
+          style={{ borderBottom: '1px solid var(--hair-strong)' }}
+        >
+          view the full catalogue →
+        </Link>
+      </div>
+      <div className="grid gap-12 md:grid-cols-3 md:gap-10">
+        {picks.map((course, i) => (
+          <Link key={course.id} to={`/courses/${course.id}`} className="block">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="font-mono text-[11px] tracking-widest text-ink-faint">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <Leaf size={11} strokeWidth={0} tilt={-22} color="var(--moss)" />
+            </div>
+            <h3 className="font-serif text-[22px] text-ink leading-snug mb-2.5">{course.title}</h3>
+            <p className="text-[14.5px] text-ink-soft leading-relaxed max-w-[340px]">
+              {course.description || 'No description'}
+            </p>
+            <div className="mt-4 flex items-baseline gap-2.5">
+              <span className="font-serif text-[15px] text-ink">
+                {course.isPaid ? formatPrice(course.priceCents, course.currency)?.toLowerCase() : 'free'}
+              </span>
+              {course.author && (
+                <span className="text-[12px] text-ink-faint">
+                  · {course.author.name || course.author.email}
+                </span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function Home() {
   const { isAuthenticated } = useAuth();
@@ -57,28 +122,9 @@ function Home() {
         </div>
       </section>
 
-      {/* Three principles */}
-      <section
-        className="py-16 sm:py-20"
-        style={{
-          borderTop: '1px solid var(--hair)',
-          borderBottom: '1px solid var(--hair)',
-          background: 'color-mix(in oklab, var(--paper-2) 60%, transparent)',
-        }}
-      >
-        <div className="grid gap-12 md:grid-cols-3 md:gap-10">
-          {PRINCIPLES.map((p) => (
-            <div key={p.n}>
-              <div className="mb-4 flex items-center gap-3">
-                <span className="font-mono text-[11px] tracking-widest text-ink-faint">{p.n}</span>
-                <Leaf size={11} strokeWidth={0} tilt={-22} color="var(--moss)" />
-              </div>
-              <h3 className="font-serif text-[22px] text-ink leading-snug mb-2.5">{p.title}</h3>
-              <p className="text-[14.5px] text-ink-soft leading-relaxed max-w-[340px]">{p.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {isAuthenticated && <ContinueLearning />}
+
+      <FeaturedCourses />
     </div>
   );
 }

@@ -277,6 +277,50 @@ export function RolePill({ role }) {
   );
 }
 
+// MilestoneCelebration — a quiet, one-time note when the lifetime
+// leaves-collected count crosses a milestone. Deliberately understated:
+// no confetti, no scores against anyone else.
+const MILESTONE_WORDS = {
+  10: "Ten",
+  25: "Twenty-five",
+  50: "Fifty",
+  100: "One hundred",
+  250: "Two hundred and fifty",
+  500: "Five hundred",
+  1000: "One thousand",
+};
+
+export function MilestoneCelebration({ milestone, onDismiss }) {
+  if (!milestone) return null;
+  const words = MILESTONE_WORDS[milestone] || String(milestone);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "color-mix(in oklab, var(--ink) 45%, transparent)" }}
+      onClick={onDismiss}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${milestone} leaves collected`}
+    >
+      <div
+        className="w-full max-w-md rounded-md p-10 text-center"
+        style={{ background: "var(--paper)", border: "1px solid var(--hair-strong)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="ml-leaf-pulse inline-block" style={{ color: "var(--moss)" }}>
+          <Leaf size={52} strokeWidth={0} />
+        </span>
+        <Kicker className="mt-6 mb-3 flex items-center justify-center">a quiet milestone</Kicker>
+        <h3 className="font-serif text-[28px] text-ink leading-tight">{words} leaves collected.</h3>
+        <p className="mt-3 text-[14px] text-ink-soft">Tended one lesson at a time.</p>
+        <button onClick={onDismiss} className="ml-button-ghost mt-8">
+          keep tending
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // LeafLoader — a quiet breathing leaf used in place of spinners.
 export function LeafLoader({ size = 28, label = "loading" }) {
   return (
