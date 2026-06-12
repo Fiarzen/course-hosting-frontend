@@ -232,7 +232,7 @@ function Profile() {
                   const completed = enrollment.completedLessons || 0;
                   const total = enrollment.totalLessons || 0;
                   return (
-                    <article key={c.id} className="ml-card p-7">
+                    <article key={c.id} className="ml-card ml-lift p-7">
                       <div className="flex items-start justify-between gap-3 mb-1">
                         <Link to={`/courses/${c.id}`}>
                           <h4 className="font-serif text-[22px] text-ink leading-tight">{c.title}</h4>

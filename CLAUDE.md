@@ -58,7 +58,7 @@ Courses can be free or paid. The payment flow branches on provider: Stripe (redi
 
 ### Styling
 
-Tailwind CSS with a custom theme. CSS classes prefixed `branch-` (e.g. `branch-nav`, `branch-heading`, `branch-pill`) are defined in `src/index.css` and represent the design system tokens.
+Tailwind CSS with a custom theme. CSS classes prefixed `ml-` (e.g. `ml-nav`, `ml-card`, `ml-pill`, `ml-kicker`) are defined in `src/index.css` and represent the design system tokens.
 
 ### Testing
 

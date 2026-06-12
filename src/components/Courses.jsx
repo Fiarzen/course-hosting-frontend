@@ -10,7 +10,7 @@ function CourseCard({ course, isEnrolled, isAuthenticated, onEnroll, onBuyCard, 
   const priceLabel = isPaid ? formatPrice(course.priceCents, course.currency) : "Free";
 
   return (
-    <article className="ml-card relative p-8 flex flex-col justify-between min-h-[280px]">
+    <article className="ml-card ml-lift relative p-8 flex flex-col justify-between min-h-[280px]">
       <span className="absolute top-5 right-5" style={{ color: "var(--moss)", opacity: 0.85 }}>
         <Leaf size={20} tilt={isPaid ? 28 : -22} strokeWidth={0} />
       </span>

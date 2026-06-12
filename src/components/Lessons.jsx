@@ -112,6 +112,13 @@ function Lessons() {
     return url;
   };
 
+  // Lesson content is rich HTML; show a plain-text preview in the card.
+  const contentPreview = (content) => {
+    if (!content) return 'No content';
+    const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return text || 'No content';
+  };
+
   if (loading) {
     return <LeafLoader label="loading lessons" />;
   }
@@ -178,14 +185,14 @@ function Lessons() {
             const embedUrl = getEmbedUrl(lesson.videoUrl);
             const done = isAuthenticated && selectedCourseId && lessonProgress[lesson.id];
             return (
-              <article key={lesson.id} className="ml-card p-7 flex flex-col">
+              <article key={lesson.id} className="ml-card ml-lift p-7 flex flex-col">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <h3 className="font-serif text-[22px] text-ink leading-tight">{lesson.title}</h3>
                   {done && (
                     <span className="text-moss shrink-0"><Leaf size={16} strokeWidth={0} /></span>
                   )}
                 </div>
-                <p className="text-[14px] text-ink-soft leading-relaxed line-clamp-3 mb-4">{lesson.content || 'No content'}</p>
+                <p className="text-[14px] text-ink-soft leading-relaxed line-clamp-3 mb-4">{contentPreview(lesson.content)}</p>
 
                 {lesson.course && (
                   <div className="text-[12px] text-ink-faint mb-3">

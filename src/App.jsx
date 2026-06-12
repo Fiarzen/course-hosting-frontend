@@ -24,6 +24,15 @@ import VerifyEmail from './components/VerifyEmail';
 import PaymentSuccess from './components/PaymentSuccess';
 import PaymentCancel from './components/PaymentCancel';
 
+// BrowserRouter keeps the old scroll position across navigations; reset it.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
 function NavLink({ to, label }) {
   const { pathname } = useLocation();
   const active = pathname === to || (to !== '/' && pathname.startsWith(to));
@@ -87,6 +96,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen">
         <nav className="ml-nav">
           <div className="mx-auto max-w-page px-6 sm:px-10">
@@ -156,7 +166,12 @@ function App() {
                   <span className="text-sm text-ink-faint">{isDarkMode ? 'dark' : 'light'} mode</span>
                   <ThemeToggle dark={isDarkMode} onToggle={() => setIsDarkMode((v) => !v)} />
                 </div>
-                {!isAuthenticated && <Link to="/login" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">sign in</Link>}
+                {!isAuthenticated && (
+                  <>
+                    <Link to="/login" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-ink-soft">sign in</Link>
+                    <Link to="/register" onClick={() => setMobileNavOpen(false)} className="block rounded px-3 py-2 text-sm text-moss-deep">begin — create an account</Link>
+                  </>
+                )}
                 {isAuthenticated && (
                   <button onClick={() => { setMobileNavOpen(false); logout(); }} className="block w-full text-left rounded px-3 py-2 text-sm text-ink-soft">
                     sign out

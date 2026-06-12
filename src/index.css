@@ -69,6 +69,20 @@ body::before {
 
 ::selection { background: var(--moss-soft); color: var(--ink); }
 
+/* Keyboard focus — one quiet moss ring everywhere */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 3px;
+}
+.ml-input:focus-visible,
+.ml-editor .ProseMirror:focus-visible {
+  outline: none; /* these signal focus via their moss underline / border instead */
+}
+
 /* Tiny utility for an underlined link in body copy */
 .ml-link {
   color: var(--moss);
@@ -100,6 +114,18 @@ body::before {
   transition: border-color 220ms ease;
 }
 .ml-card:hover { border-color: var(--hair-strong); }
+
+/* Add to interactive cards only — a gentle lift on hover */
+.ml-lift {
+  transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+}
+.ml-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -20px rgba(26, 29, 24, 0.4);
+}
+:root.dark .ml-lift:hover {
+  box-shadow: 0 12px 32px -20px rgba(0, 0, 0, 0.7);
+}
 
 .ml-input {
   width: 100%;
@@ -142,6 +168,7 @@ body::before {
   border: 1px solid var(--hair-strong);
   display: inline-flex; align-items: center; gap: 8px;
   cursor: pointer;
+  transition: color 180ms ease, border-color 180ms ease;
 }
 .ml-button-ghost:hover { color: var(--ink); border-color: color-mix(in oklab, var(--ink) 30%, transparent); }
 .ml-button-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -262,4 +289,10 @@ body::before {
 @keyframes ml-leaf-breathe {
   0%, 100% { opacity: 0.35; transform: scale(0.94); }
   50%      { opacity: 1;    transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ml-screen-fade { animation: none; }
+  .ml-leaf-pulse  { animation: none; opacity: 0.8; }
+  .ml-lift:hover  { transform: none; }
 }

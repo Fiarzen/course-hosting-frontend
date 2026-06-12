@@ -1,6 +1,24 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Leaf, Kicker, SectionHeading } from './Leaf';
+import { Leaf, Kicker } from './Leaf';
+
+const PRINCIPLES = [
+  {
+    n: '01',
+    title: 'One thing at a time',
+    body: 'Each course is a single path of lessons, taken in order. No feeds, no dashboards calling for your attention.',
+  },
+  {
+    n: '02',
+    title: 'Progress that grows',
+    body: 'Finish a lesson and a leaf unfurls along the stem. Your progress is something you tend, not a number you chase.',
+  },
+  {
+    n: '03',
+    title: 'Quiet by design',
+    body: 'No streaks, no leaderboards, no recommendation engine. Just the course, the work, and the time you give it.',
+  },
+];
 
 function Home() {
   const { isAuthenticated } = useAuth();
@@ -41,55 +59,26 @@ function Home() {
 
       {/* Three principles */}
       <section
-        className="px-0 py-16 sm:py-20"
+        className="py-16 sm:py-20"
         style={{
           borderTop: '1px solid var(--hair)',
           borderBottom: '1px solid var(--hair)',
           background: 'color-mix(in oklab, var(--paper-2) 60%, transparent)',
         }}
       >
-      </section>
-
-      {/* <section className="py-24 max-w-page mx-auto">
-        <SectionHeading kicker="featured this season">A course we recommend</SectionHeading>
-        <Link
-          to="/courses"
-          className="ml-card grid overflow-hidden md:grid-cols-2 cursor-pointer"
-        >
-          <div
-            className="relative min-h-[360px] grid place-items-center"
-            style={{
-              background:
-                'repeating-linear-gradient(135deg, var(--moss-wash) 0 2px, transparent 2px 14px), var(--paper)',
-              borderRight: '1px solid var(--hair)',
-            }}
-          >
-            <div className="opacity-50" style={{ color: 'var(--moss)' }}>
-              <Leaf size={140} strokeWidth={0} tilt={-12} />
-            </div>
-            <div className="ml-kicker absolute bottom-4 left-5 text-ink-faint normal-case tracking-widest">
-              [ cover · author portrait ]
-            </div>
-          </div>
-          <div className="flex flex-col justify-between p-10 sm:p-12">
-            <div>
-              <Kicker className="mb-5 text-ink-faint normal-case">spring · 8 lessons · 6 min each</Kicker>
-              <h3 className="font-serif text-[40px] leading-tight text-ink mb-4">The art of slow reading</h3>
-              <p className="text-[16px] text-ink-soft leading-relaxed max-w-[420px]">
-                A six-week practice in attention. Inhabit a page longer than is comfortable,
-                and notice what you would otherwise have missed.
-              </p>
-            </div>
-            <div className="mt-9 pt-6 flex items-center justify-between" style={{ borderTop: '1px solid var(--hair)' }}>
-              <div>
-                <div className="text-[13px] text-ink">Ren Asano</div>
-                <div className="text-[12px] text-ink-faint">Essayist, Kyoto</div>
+        <div className="grid gap-12 md:grid-cols-3 md:gap-10">
+          {PRINCIPLES.map((p) => (
+            <div key={p.n}>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="font-mono text-[11px] tracking-widest text-ink-faint">{p.n}</span>
+                <Leaf size={11} strokeWidth={0} tilt={-22} color="var(--moss)" />
               </div>
-              <span className="font-serif text-[22px] text-ink">free</span>
+              <h3 className="font-serif text-[22px] text-ink leading-snug mb-2.5">{p.title}</h3>
+              <p className="text-[14.5px] text-ink-soft leading-relaxed max-w-[340px]">{p.body}</p>
             </div>
-          </div>
-        </Link>
-      </section> */}
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
