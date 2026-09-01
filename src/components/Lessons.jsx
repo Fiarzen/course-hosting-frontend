@@ -17,10 +17,11 @@ function Lessons() {
   const canCreateLesson = user?.role === 'CREATOR' || user?.role === 'ADMIN';
 
   useEffect(() => {
-    loadLessons();
     loadCourses();
   }, []);
 
+  // Also runs on mount (selectedCourseId starts null), so the list is fetched
+  // once, not twice.
   useEffect(() => {
     if (selectedCourseId) {
       loadLessonsByCourse(selectedCourseId);

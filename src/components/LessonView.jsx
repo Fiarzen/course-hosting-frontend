@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLeavesCollected } from '../context/LeavesCollectedContext';
-import { lessonsApi, enrollmentApi } from '../api/api';
+import { lessonsApi, enrollmentApi, coursesApi } from '../api/api';
 import { playCompletionSound } from '../utils/sound';
 import { Leaf, Kicker, LeafRow, LeafLoader } from './Leaf';
 import RichTextContent from './RichTextContent';
@@ -10,7 +10,7 @@ import RichTextContent from './RichTextContent';
 function LessonView() {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { refresh: refreshLeaves } = useLeavesCollected();
 
   const [lessons, setLessons] = useState([]);
@@ -22,6 +22,7 @@ function LessonView() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [courseCompletedCount, setCourseCompletedCount] = useState(0);
+  const [course, setCourse] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -32,6 +33,12 @@ function LessonView() {
       try {
         const list = await lessonsApi.getByCourse(parseInt(courseId));
         setLessons(list);
+
+        // Needed only to decide whether to show the author's "edit" shortcut.
+        coursesApi
+          .getAll()
+          .then((all) => setCourse(all.find((c) => c.id === parseInt(courseId)) || null))
+          .catch(() => setCourse(null));
 
         const fullLesson = await lessonsApi.getById(parseInt(lessonId));
         setCurrentLesson(fullLesson);
@@ -142,6 +149,7 @@ function LessonView() {
   }
 
   const embedUrl = getEmbedUrl(currentLesson.videoUrl);
+  const isAuthorOrAdmin = user?.role === 'ADMIN' || (!!course?.authorId && course.authorId === user?.id);
 
   const handleCompleteLesson = async () => {
     setCompleting(true);
@@ -169,9 +177,19 @@ function LessonView() {
     <div className="ml-screen-fade max-w-[1080px] mx-auto py-12">
       {/* Header */}
       <div className="flex items-center justify-between gap-6 flex-wrap mb-8">
-        <button onClick={() => navigate(`/courses/${courseId}`)} className="text-[13px] text-ink-soft">
-          ← back to course
-        </button>
+        <div className="flex items-center gap-5">
+          <button onClick={() => navigate(`/courses/${courseId}`)} className="text-[13px] text-ink-soft">
+            ← back to course
+          </button>
+          {isAuthorOrAdmin && (
+            <button
+              onClick={() => navigate(`/courses/${courseId}/lessons/${lessonId}/edit`)}
+              className="text-[13px] text-moss-deep"
+            >
+              edit this lesson
+            </button>
+          )}
+        </div>
         {isEnrolled && total > 0 && (
           <div className="flex items-center gap-3">
             <span className="font-mono text-[11px] tracking-widest text-ink-faint">

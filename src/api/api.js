@@ -12,6 +12,16 @@ const api = axios.create({
   },
 });
 
+// Pull the backend's own message out of an axios error. Every route returns
+// `{ error, code }`, and showing it beats a generic "please try again" — it is
+// the difference between "you don't own this course" and a mystery failure.
+export function apiErrorMessage(err, fallback = 'Something went wrong. Please try again.') {
+  const backendMessage = err?.response?.data?.error;
+  if (backendMessage) return backendMessage;
+  if (!err?.response) return 'Could not reach the server. Check your connection and try again.';
+  return fallback;
+}
+
 // Courses API
 export const coursesApi = {
   getAll: async () => {

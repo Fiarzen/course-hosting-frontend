@@ -264,18 +264,32 @@ function CourseDetail() {
         </div>
 
         <div>
-          <SectionHeading kicker="curriculum">Lessons</SectionHeading>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <SectionHeading kicker="curriculum">Lessons</SectionHeading>
+            {isAuthorOrAdmin && (
+              <button onClick={() => navigate(`/lessons/create?courseId=${courseId}`)} className="ml-button-ghost">
+                + add lesson
+              </button>
+            )}
+          </div>
 
           {lessons.length === 0 ? (
             <p className="text-ink-faint">
-              {!isAuthenticated ? 'Please sign in to see lessons.' : 'No lessons available for this course yet.'}
+              {!isAuthenticated
+                ? 'Please sign in to see lessons.'
+                : isAuthorOrAdmin
+                  ? 'No lessons yet — add the first one to get this course started.'
+                  : 'No lessons available for this course yet.'}
             </p>
           ) : (
             <ol className="list-none p-0 m-0">
               {lessons.map((lesson, i) => {
                 const isCompleted = lessonProgress[lesson.id] || false;
                 const isCurrent = i === currentIndex;
-                const canViewContent = isAuthenticated && isEnrolled;
+                // The backend already serves full content to the author/admin;
+                // gating on enrollment alone told creators to "enroll to view"
+                // their own lessons and hid the open/edit links.
+                const canViewContent = isAuthenticated && (isEnrolled || isAuthorOrAdmin);
                 return (
                   <li key={lesson.id} style={{
                     borderTop: i === 0 ? '1px solid var(--hair)' : 'none',
@@ -323,6 +337,14 @@ function CourseDetail() {
                               className="text-[11px] text-ink-soft"
                             >
                               open →
+                            </button>
+                          )}
+                          {isAuthorOrAdmin && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/courses/${courseId}/lessons/${lesson.id}/edit`); }}
+                              className="text-[11px] text-moss-deep"
+                            >
+                              edit
                             </button>
                           )}
                         </div>

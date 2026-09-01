@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { lessonsApi, coursesApi } from '../api/api';
+import { lessonsApi, coursesApi, apiErrorMessage } from '../api/api';
+import { useAuth } from '../context/AuthContext';
 import { Leaf, Kicker, Field } from './Leaf';
 import RichTextEditor from './RichTextEditor';
 
 function CreateLesson() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -19,23 +21,31 @@ function CreateLesson() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadCourses();
-    const params = new URLSearchParams(location.search);
-    const qsCourseId = params.get('courseId');
-    if (qsCourseId) {
-      setFormData((prev) => ({ ...prev, courseId: qsCourseId }));
-    }
-  }, [location.search]);
+    // Only offer courses this user can actually author lessons for. The public
+    // catalogue would also list other people's courses, and picking one only
+    // failed later with a 403 from POST /lessons.
+    const loadCourses = async () => {
+      try {
+        const data =
+          user?.role === 'ADMIN' ? await coursesApi.getAll() : await coursesApi.getMyCreated();
+        setCourses(data);
 
-  const loadCourses = async () => {
-    try {
-      const data = await coursesApi.getAll();
-      setCourses(data);
-    } catch (err) {
-      console.error('Failed to load courses:', err);
-      setError('Failed to load courses. Please refresh the page.');
-    }
-  };
+        const qsCourseId = new URLSearchParams(location.search).get('courseId');
+        if (qsCourseId && data.some((c) => String(c.id) === String(qsCourseId))) {
+          setFormData((prev) => ({ ...prev, courseId: qsCourseId }));
+        } else if (qsCourseId) {
+          // A <select> whose value matches no <option> renders blank, which
+          // looked like the preselection had silently failed.
+          setError('That course is not one you can add lessons to. Pick another below.');
+        }
+      } catch (err) {
+        console.error('Failed to load courses:', err);
+        setError(apiErrorMessage(err, 'Failed to load courses. Please refresh the page.'));
+      }
+    };
+
+    if (user) loadCourses();
+  }, [location.search, user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,7 +101,7 @@ function CreateLesson() {
       );
       navigate(`/courses/${formData.courseId}`);
     } catch (err) {
-      setError('Failed to create lesson. Please try again.');
+      setError(apiErrorMessage(err, 'Failed to create lesson. Please try again.'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -131,12 +141,21 @@ function CreateLesson() {
         </Field>
 
         <Field label="Course" required>
-          <select name="courseId" value={formData.courseId} onChange={handleChange} required className="w-full text-[15px] px-3 py-2.5 rounded" style={inputStyle}>
-            <option value="">Select a course</option>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>{course.title}</option>
-            ))}
-          </select>
+          {courses.length === 0 ? (
+            <p className="text-[13px] text-ink-faint">
+              You have no courses yet.{' '}
+              <button type="button" onClick={() => navigate('/courses/create')} className="ml-link">
+                create one first
+              </button>
+            </p>
+          ) : (
+            <select name="courseId" value={formData.courseId} onChange={handleChange} required className="w-full text-[15px] px-3 py-2.5 rounded" style={inputStyle}>
+              <option value="">Select a course</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>{course.title}</option>
+              ))}
+            </select>
+          )}
         </Field>
 
         <Field label="YouTube video URL" hint="optional">

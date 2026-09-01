@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { lessonsApi } from '../api/api';
+import { lessonsApi, apiErrorMessage } from '../api/api';
 import { Leaf, Kicker, Field, LeafLoader } from './Leaf';
 import RichTextEditor from './RichTextEditor';
 
@@ -32,7 +32,7 @@ function EditLesson() {
         setError(null);
       } catch (err) {
         console.error('Failed to load lesson for edit:', err);
-        setError('Failed to load lesson. Make sure you are the course author or an admin.');
+        setError(apiErrorMessage(err, 'Failed to load lesson. Make sure you are the course author or an admin.'));
       } finally {
         setLoading(false);
       }
@@ -77,13 +77,13 @@ function EditLesson() {
     setError(null);
 
     try {
-      const videoUrl = formData.videoUrl ? convertToEmbedUrl(formData.videoUrl) : null;
+      const videoUrl = formData.videoUrl ? convertToEmbedUrl(formData.videoUrl) : '';
       const fd = new FormData();
       fd.append('title', formData.title);
       fd.append('content', formData.content);
-      if (videoUrl) {
-        fd.append('videoUrl', videoUrl);
-      }
+      // Always send the field: omitting it told the backend "leave unchanged",
+      // so clearing the box could never actually remove the video.
+      fd.append('videoUrl', videoUrl || '');
       fd.append('clearPdf', removePdf ? 'true' : 'false');
       if (files.pdf) {
         fd.append('pdf', files.pdf);
@@ -93,7 +93,9 @@ function EditLesson() {
       navigate(`/courses/${courseId}`);
     } catch (err) {
       console.error('Failed to update lesson:', err);
-      setError('Failed to update lesson. Please make sure you are the course author or an admin.');
+      setError(
+        apiErrorMessage(err, 'Failed to update lesson. Make sure you are the course author or an admin.')
+      );
     } finally {
       setSaving(false);
     }

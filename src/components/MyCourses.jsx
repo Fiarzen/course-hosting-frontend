@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { coursesApi, lessonsApi, paymentsApi, assessmentsApi } from '../api/api';
+import { coursesApi, lessonsApi, paymentsApi, assessmentsApi, apiErrorMessage } from '../api/api';
 import { formatPrice, CURRENCY_OPTIONS } from '../utils/pricing';
 import { Leaf, Kicker, LeafTag, LeafLoader } from './Leaf';
 
@@ -12,6 +12,8 @@ function MyCourses() {
   const [courses, setCourses] = useState([]);
   const [lessonsByCourse, setLessonsByCourse] = useState({});
   const [assessmentsByCourse, setAssessmentsByCourse] = useState({});
+  const [openPanel, setOpenPanel] = useState({}); // { [courseId]: 'lessons' | 'assessments' | null }
+  const [panelLoading, setPanelLoading] = useState({}); // { [courseId]: 'lessons' | 'assessments' | null }
   const [deletingAssessment, setDeletingAssessment] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,22 +61,33 @@ function MyCourses() {
   }, [isAuthenticated, isCreatorOrAdmin, navigate]);
 
   const loadLessonsForCourse = async (courseId) => {
-    try {
-      const lessons = await lessonsApi.getByCourse(courseId);
-      setLessonsByCourse((prev) => ({ ...prev, [courseId]: lessons }));
-    } catch (err) {
-      console.error('Failed to load lessons for course', courseId, err);
-      alert('Failed to load lessons for this course.');
-    }
+    const lessons = await lessonsApi.getByCourse(courseId);
+    setLessonsByCourse((prev) => ({ ...prev, [courseId]: lessons }));
   };
 
   const loadAssessmentsForCourse = async (courseId) => {
+    const data = await assessmentsApi.getByCourse(courseId);
+    setAssessmentsByCourse((prev) => ({ ...prev, [courseId]: data }));
+  };
+
+  // The "manage" buttons used to fire a silent fetch: no spinner, no way to
+  // close the panel, and a second click looked like nothing happened. Now they
+  // toggle, and they always refetch so the list can't go stale.
+  const togglePanel = async (courseId, panel) => {
+    if (openPanel[courseId] === panel) {
+      setOpenPanel((prev) => ({ ...prev, [courseId]: null }));
+      return;
+    }
+    setPanelLoading((prev) => ({ ...prev, [courseId]: panel }));
     try {
-      const data = await assessmentsApi.getByCourse(courseId);
-      setAssessmentsByCourse((prev) => ({ ...prev, [courseId]: data }));
+      if (panel === 'lessons') await loadLessonsForCourse(courseId);
+      else await loadAssessmentsForCourse(courseId);
+      setOpenPanel((prev) => ({ ...prev, [courseId]: panel }));
     } catch (err) {
-      console.error('Failed to load assessments for course', courseId, err);
-      alert('Failed to load assessments for this course.');
+      console.error(`Failed to load ${panel} for course`, courseId, err);
+      alert(apiErrorMessage(err, `Failed to load ${panel} for this course.`));
+    } finally {
+      setPanelLoading((prev) => ({ ...prev, [courseId]: null }));
     }
   };
 
@@ -113,7 +126,7 @@ function MyCourses() {
       setLessonsByCourse((prev) => ({ ...prev, [courseId]: updated }));
     } catch (err) {
       console.error('Failed to save lesson order:', err);
-      alert('Failed to save lesson order. Please try again.');
+      alert(apiErrorMessage(err, 'Failed to save lesson order. Please try again.'));
     } finally {
       setSavingOrder((prev) => ({ ...prev, [courseId]: false }));
     }
@@ -127,19 +140,25 @@ function MyCourses() {
       await loadLessonsForCourse(courseId);
     } catch (err) {
       console.error('Failed to delete lesson:', err);
-      alert('Failed to delete lesson. Please try again.');
+      alert(apiErrorMessage(err, 'Failed to delete lesson. Please try again.'));
     } finally {
       setDeletingLesson((prev) => ({ ...prev, [lessonId]: false }));
     }
   };
 
   const handleAccessChange = (courseId, field, value) => {
+    const course = courses.find((c) => c.id === courseId);
     setAccessForm((prev) => ({
       ...prev,
       [courseId]: {
-        restrictedToAllowList: prev[courseId]?.restrictedToAllowList ?? false,
-        allowedEmailsText: prev[courseId]?.allowedEmailsText ?? '',
-        ...{ [field]: value },
+        // Seed the untouched half of the form from the saved course. Defaulting
+        // to false/'' meant ticking the checkbox blanked the email list (and
+        // typing an email flipped the course back to unrestricted) on save.
+        restrictedToAllowList:
+          prev[courseId]?.restrictedToAllowList ?? course?.restrictedToAllowList ?? false,
+        allowedEmailsText:
+          prev[courseId]?.allowedEmailsText ?? (course?.allowedEmails || []).join(', '),
+        [field]: value,
       },
     }));
   };
@@ -174,14 +193,28 @@ function MyCourses() {
 
     setSavingAccess((prev) => ({ ...prev, [courseId]: true }));
     try {
-      await coursesApi.updateAccess(courseId, {
+      const updated = await coursesApi.updateAccess(courseId, {
         restrictedToAllowList: restricted,
         allowedEmails,
       });
-      setLessonsByCourse((prev) => ({ ...prev })); // ensure rerender
+      // Fold the server's answer back into `courses` and drop the local draft,
+      // so the allowlist/open tag and the textarea show what was actually saved
+      // instead of the stale value the page loaded with.
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId
+            ? {
+                ...c,
+                restrictedToAllowList: updated.restrictedToAllowList,
+                allowedEmails: updated.allowedEmails || [],
+              }
+            : c
+        )
+      );
+      setAccessForm((prev) => ({ ...prev, [courseId]: undefined }));
     } catch (err) {
       console.error('Failed to update course access:', err);
-      alert('Failed to update course access. Please try again.');
+      alert(apiErrorMessage(err, 'Failed to update course access. Please try again.'));
     } finally {
       setSavingAccess((prev) => ({ ...prev, [courseId]: false }));
     }
@@ -319,11 +352,29 @@ function MyCourses() {
                   <button onClick={() => navigate(`/lessons/create?courseId=${course.id}`)} className="ml-button-primary text-[12px] py-2 px-4">
                     + add lesson
                   </button>
-                  <button onClick={() => loadLessonsForCourse(course.id)} className="ml-button-ghost text-[12px] py-2 px-4">
-                    manage lessons
+                  <button
+                    onClick={() => togglePanel(course.id, 'lessons')}
+                    disabled={!!panelLoading[course.id]}
+                    aria-expanded={openPanel[course.id] === 'lessons'}
+                    className="ml-button-ghost text-[12px] py-2 px-4 disabled:opacity-50"
+                  >
+                    {panelLoading[course.id] === 'lessons'
+                      ? 'loading…'
+                      : openPanel[course.id] === 'lessons'
+                        ? 'hide lessons'
+                        : 'manage lessons'}
                   </button>
-                  <button onClick={() => loadAssessmentsForCourse(course.id)} className="ml-button-ghost text-[12px] py-2 px-4">
-                    manage assessments
+                  <button
+                    onClick={() => togglePanel(course.id, 'assessments')}
+                    disabled={!!panelLoading[course.id]}
+                    aria-expanded={openPanel[course.id] === 'assessments'}
+                    className="ml-button-ghost text-[12px] py-2 px-4 disabled:opacity-50"
+                  >
+                    {panelLoading[course.id] === 'assessments'
+                      ? 'loading…'
+                      : openPanel[course.id] === 'assessments'
+                        ? 'hide assessments'
+                        : 'manage assessments'}
                   </button>
                   <button
                     onClick={() => handleDeleteCourse(course.id)}
@@ -422,7 +473,7 @@ function MyCourses() {
                 })()}
               </div>
 
-              {lessonsByCourse[course.id] && (
+              {openPanel[course.id] === 'lessons' && lessonsByCourse[course.id] && (
                 <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--hair)' }}>
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-mono text-[10px] tracking-widest uppercase text-ink-faint">lessons</h4>
@@ -436,7 +487,12 @@ function MyCourses() {
                   </div>
 
                   {lessonsByCourse[course.id].length === 0 ? (
-                    <p className="text-ink-faint text-[14px]">No lessons yet.</p>
+                    <p className="text-ink-faint text-[14px]">
+                      No lessons yet.{' '}
+                      <button onClick={() => navigate(`/lessons/create?courseId=${course.id}`)} className="ml-link">
+                        add the first one
+                      </button>
+                    </p>
                   ) : (
                     <ul className="list-none p-0 m-0 space-y-px">
                       {lessonsByCourse[course.id].map((lesson, index) => (
@@ -470,7 +526,7 @@ function MyCourses() {
                 </div>
               )}
 
-              {assessmentsByCourse[course.id] && (
+              {openPanel[course.id] === 'assessments' && assessmentsByCourse[course.id] && (
                 <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--hair)' }}>
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-mono text-[10px] tracking-widest uppercase text-ink-faint">assessments</h4>
